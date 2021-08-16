@@ -2,13 +2,17 @@ package de.lolhens.cdncache
 
 import cats.effect._
 import cats.syntax.semigroupk._
+import io.circe.Json
+import io.circe.syntax._
 import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.circe._
 import org.http4s.implicits._
 import org.http4s.scalatags._
 import org.http4s.server.Router
 import org.http4s.server.staticcontent.WebjarService.WebjarAsset
 import org.http4s.server.staticcontent.{ResourceServiceBuilder, WebjarServiceBuilder}
 import org.http4s.{HttpRoutes, Uri}
+import scodec.bits.ByteVector
 
 import java.nio.file.{Path, Paths}
 
@@ -22,26 +26,22 @@ object Server extends IOApp {
   private def applicationResource(cacheUri: Uri, cachePath: Path): Resource[IO, Unit] =
     for {
       ec <- Resource.eval(IO.executionContext)
-      modeRef <- Resource.eval(Ref[IO].of(Mode(record = true)))
+      modeRef <- Resource.eval(Ref[IO].of(Mode(record = false)))
       cache <- Cache(cacheUri, cachePath, modeRef)
-      server1Fiber <- BlazeServerBuilder[IO](ec)
+      _ <- BlazeServerBuilder[IO](ec)
         .bindHttp(8080, "0.0.0.0")
-        .withHttpApp(cache().orNotFound)
+        .withHttpApp(cache.toRoutes.orNotFound)
         .resource
-        .start
-      server2Fiber <- BlazeServerBuilder[IO](ec)
+      _ <- BlazeServerBuilder[IO](ec)
         .bindHttp(8081, "0.0.0.0")
-        .withHttpApp(uiService(modeRef).orNotFound)
+        .withHttpApp(uiService(cache, modeRef).orNotFound)
         .resource
-        .start
-      _ <- server1Fiber.joinWithNever
-      _ <- server2Fiber.joinWithNever
     } yield ()
 
   def webjarUri(asset: WebjarAsset) =
     s"assets/${asset.library}/${asset.version}/${asset.asset}"
 
-  def uiService(modeRef: Ref[IO, Mode]): HttpRoutes[IO] = {
+  def uiService(cache: Cache, modeRef: Ref[IO, Mode]): HttpRoutes[IO] = {
     import org.http4s.dsl.io._
     Router(
       "/assets" -> {
@@ -50,8 +50,29 @@ object Server extends IOApp {
       },
 
       "/api" -> HttpRoutes.of {
-        case GET -> Root / "test" =>
-          Ok("Test")
+        case GET -> Root / "mode" =>
+          for {
+            mode <- modeRef.get
+            response <- Ok(mode.asJson)
+          } yield response
+
+        case request@POST -> Root / "mode" =>
+          for {
+            mode <- request.as[Json].map(_.as[Mode].toTry.get)
+            _ <- modeRef.set(mode)
+            response <- Ok("")
+          } yield response
+
+        case GET -> Root / "cache" / "entries" =>
+          for {
+            files <- cache.listEntries.compile.toList
+            entries = files.map(path => CacheEntry(
+              uri = ByteVector.fromValidBase64(path.getFileName.toString).decodeUtf8.toTry.get,
+              contentType = "",
+              contentLength = 0,
+            ))
+            response <- Ok(entries.asJson)
+          } yield response
       },
 
       "/" -> HttpRoutes.of {

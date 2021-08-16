@@ -1,6 +1,7 @@
 package de.lolhens.cdncache
 
 import cats.effect.IO
+import io.circe.syntax._
 import io.circe.{Json, parser}
 import japgolly.scalajs.react.extra.Ajax
 import scodec.bits.ByteVector
@@ -38,4 +39,13 @@ object Backend {
     request(method, url, json).map(bytes =>
       bytes.decodeUtf8.toTry.flatMap(parser.parse(_).toTry).get
     )
+
+  def mode: IO[Mode] =
+    jsonRequest("GET", "/api/mode", None).map(_.as[Mode].toTry.get)
+
+  def setMode(mode: Mode): IO[Unit] =
+    jsonRequest("POST", "/api/mode", Some(mode.asJson)).void
+
+  def cacheEntries: IO[Seq[CacheEntry]] =
+    jsonRequest("GET", "/api/cache/entries", None).map(_.as[Seq[CacheEntry]].toTry.get)
 }

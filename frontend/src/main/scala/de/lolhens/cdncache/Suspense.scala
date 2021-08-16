@@ -49,23 +49,21 @@ object Suspense {
         .merge
     }
 
-    private def waitForAsyncBody: IO[Unit] = {
+    private def waitForAsyncBody: IO[Unit] =
       (for {
         state <- OptionT.liftF($.state.to[IO])
         async <- OptionT.fromOption[IO](state.asyncBody)
-        _ <- OptionT.liftF(async.flatMap { body =>
-          $.modState(_.copy(body = body, asyncBody = none)).to[IO]
-        })
+        body <- OptionT.liftF(async)
+        _ <- OptionT.liftF($.modStateAsync(_.copy(body = body, asyncBody = none)))
       } yield ())
         .value
         .void
-    }
 
     def start: IO[Unit] = waitForAsyncBody
 
     def update: IO[Unit] = waitForAsyncBody
 
-    def render(props: Props, state: State): VdomNode = state.body
+    def render(state: State): VdomNode = state.body
   }
 
   private val Component =
@@ -77,9 +75,8 @@ object Suspense {
       .componentDidUpdate(_.backend.update)
       .build
 
-  def apply[A](fallback: => VdomNode,
-               asyncBody: IO[A])
-              (implicit ev: A => VdomNode): Unmounted[Props, State, Backend] = {
-    Component(Props(() => fallback, asyncBody.map(ev)))
+  def apply[A](asyncValue: IO[A])
+              (toVdomNode: Option[A] => VdomNode): Unmounted[Props, State, Backend] = {
+    Component(Props(() => toVdomNode(none), asyncValue.map(e => toVdomNode(e.some))))
   }
 }

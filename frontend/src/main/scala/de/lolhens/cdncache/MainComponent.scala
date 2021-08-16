@@ -12,15 +12,21 @@ object MainComponent {
   case class Props()
 
   case class State(
-                    apps: Seq[App],
-                    filter: String
+                    mode: Option[Mode]
                   )
 
   object State {
-    val empty: State = State(Seq.empty, "")
+    val empty: State = State(None)
   }
 
   class Backend($: BackendScope[Props, State]) {
+    def componentDidMount: IO[Unit] =
+      Backend.mode.flatMap(mode =>
+        $.modStateAsync(state =>
+          state.copy(mode = Some(mode))
+        )
+      )
+
     def render: VdomElement = {
       val state = $.state.unsafeRunSync()
 
@@ -46,9 +52,30 @@ object MainComponent {
           ^.placeholder := "Search...",
           ^.onChange ==> { e: ReactEventFromInput =>
             val value = e.target.value
-            $.modState(_.copy(filter = value))
+            $.modState(e => e)
           }
-        )
+        ),
+        <.div(^.cls := "d-flex flex-row",
+          state.mode match {
+            case None => "Loading..."
+            case Some(mode) => mode.toString
+          },
+          <.button("Toggle Mode", ^.onClick --> IO.defer {
+            state.mode match {
+              case None => IO.unit
+              case Some(mode) =>
+                val newMode = mode.copy(record = !mode.record)
+                $.modStateAsync(_.copy(mode = Some(newMode))) >>
+                  Backend.setMode(newMode)
+            }
+          })
+        ),
+        Suspense(Backend.cacheEntries) {
+          case None => "Loading entries..."
+          case Some(entries) => entries.toVdomArray { entry =>
+            <.div(entry.toString)
+          }
+        }
       )
     }
   }
@@ -58,5 +85,6 @@ object MainComponent {
       .initialState(State.empty)
       .backend(new Backend(_))
       .render(_.backend.render)
+      .componentDidMount(_.backend.componentDidMount)
       .build
 }

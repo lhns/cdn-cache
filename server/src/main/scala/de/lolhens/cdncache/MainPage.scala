@@ -28,7 +28,7 @@ object MainPage {
   def apply(): Tag = html(
     head(
       meta(charset := "utf-8"),
-      tag("title")("Server Desktop"),
+      tag("title")("CDN Cache Config"),
       meta(name := "viewport", content := "width=device-width, initial-scale=1"),
     ),
     body(
