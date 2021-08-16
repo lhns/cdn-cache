@@ -12,70 +12,76 @@ object MainComponent {
   case class Props()
 
   case class State(
-                    mode: Option[Mode]
+                    mode: Option[Mode],
+                    entries: Option[Seq[CacheEntry]],
+                    filter: String
                   )
 
   object State {
-    val empty: State = State(None)
+    val empty: State = State(None, None, "")
   }
 
   class Backend($: BackendScope[Props, State]) {
     def componentDidMount: IO[Unit] =
-      Backend.mode.flatMap(mode =>
-        $.modStateAsync(state =>
-          state.copy(mode = Some(mode))
-        )
-      )
+      for {
+        modeFiber <- Backend.mode.start
+        entriesFiber <- Backend.cacheEntries.start
+        mode <- modeFiber.joinWithNever
+        _ <- $.modStateAsync(_.copy(mode = Some(mode)))
+        entries <- entriesFiber.joinWithNever
+        _ <- $.modStateAsync(_.copy(entries = Some(entries)))
+      } yield ()
 
     def render: VdomElement = {
       val state = $.state.unsafeRunSync()
 
       <.div(
         ^.cls := "container my-4 d-flex flex-column",
-        <.h1(
-          ^.id := "settings",
-          ^.position := "relative",
-          <.i(
-            ^.cls := "bi bi-gear bi-select",
-            ^.position := "absolute",
-            ^.right := "0",
-            ^.top := "0.8rem",
-            ^.onClick --> IO {
-              println("Settings")
-            }
-          )
-        ),
         <.input(
           ^.id := "search",
-          ^.cls := "align-self-center form-control form-control-lg mb-4",
+          ^.cls := "align-self-center form-control mb-4",
           ^.tpe := "text",
           ^.placeholder := "Search...",
           ^.onChange ==> { e: ReactEventFromInput =>
             val value = e.target.value
-            $.modState(e => e)
+            $.modState(_.copy(filter = value))
           }
         ),
         <.div(^.cls := "d-flex flex-row",
           state.mode match {
             case None => "Loading..."
-            case Some(mode) => mode.toString
-          },
-          <.button("Toggle Mode", ^.onClick --> IO.defer {
-            state.mode match {
-              case None => IO.unit
-              case Some(mode) =>
-                val newMode = mode.copy(record = !mode.record)
-                $.modStateAsync(_.copy(mode = Some(newMode))) >>
-                  Backend.setMode(newMode)
-            }
-          })
-        ),
-        Suspense(Backend.cacheEntries) {
-          case None => "Loading entries..."
-          case Some(entries) => entries.toVdomArray { entry =>
-            <.div(entry.toString)
+            case Some(mode) =>
+              <.button(^.cls := s"btn btn-${if (mode.record) "danger" else "primary"}",
+                if (mode.record) "Stop Recording"
+                else "Start Recording",
+                ^.onClick --> IO.defer {
+                  val newMode = mode.copy(record = !mode.record)
+                  $.modStateAsync(_.copy(mode = Some(newMode))) >>
+                    Backend.setMode(newMode)
+                })
           }
-        }
+        ),
+        <.table(^.cls := "table",
+          <.thead(
+            <.tr(
+              <.th(^.scope := "col", "URI"),
+              <.th(^.scope := "col", "ContentType"),
+              <.th(^.scope := "col", "ContentLength"),
+            )
+          ),
+          <.tbody(
+            {
+              val filterLowerCase = state.filter.toLowerCase
+              state.entries.getOrElse(Seq.empty).filter(_.uri.toLowerCase.contains(filterLowerCase))
+            }.toVdomArray { entry =>
+              <.tr(
+                <.th(^.scope := "row", entry.uri),
+                <.td(entry.contentType),
+                <.td(entry.contentLength.map(_ + " B")),
+              )
+            }
+          )
+        )
       )
     }
   }

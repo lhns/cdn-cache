@@ -12,7 +12,6 @@ import org.http4s.server.Router
 import org.http4s.server.staticcontent.WebjarService.WebjarAsset
 import org.http4s.server.staticcontent.{ResourceServiceBuilder, WebjarServiceBuilder}
 import org.http4s.{HttpRoutes, Uri}
-import scodec.bits.ByteVector
 
 import java.nio.file.{Path, Paths}
 
@@ -34,14 +33,14 @@ object Server extends IOApp {
         .resource
       _ <- BlazeServerBuilder[IO](ec)
         .bindHttp(8081, "0.0.0.0")
-        .withHttpApp(uiService(cache, modeRef).orNotFound)
+        .withHttpApp(uiService(cache).orNotFound)
         .resource
     } yield ()
 
   def webjarUri(asset: WebjarAsset) =
     s"assets/${asset.library}/${asset.version}/${asset.asset}"
 
-  def uiService(cache: Cache, modeRef: Ref[IO, Mode]): HttpRoutes[IO] = {
+  def uiService(cache: Cache): HttpRoutes[IO] = {
     import org.http4s.dsl.io._
     Router(
       "/assets" -> {
@@ -52,25 +51,20 @@ object Server extends IOApp {
       "/api" -> HttpRoutes.of {
         case GET -> Root / "mode" =>
           for {
-            mode <- modeRef.get
+            mode <- cache.modeRef.get
             response <- Ok(mode.asJson)
           } yield response
 
         case request@POST -> Root / "mode" =>
           for {
             mode <- request.as[Json].map(_.as[Mode].toTry.get)
-            _ <- modeRef.set(mode)
+            _ <- cache.modeRef.set(mode)
             response <- Ok("")
           } yield response
 
         case GET -> Root / "cache" / "entries" =>
           for {
-            files <- cache.listEntries.compile.toList
-            entries = files.map(path => CacheEntry(
-              uri = ByteVector.fromValidBase64(path.getFileName.toString).decodeUtf8.toTry.get,
-              contentType = "",
-              contentLength = 0,
-            ))
+            entries <- cache.listEntries.compile.toList
             response <- Ok(entries.asJson)
           } yield response
       },

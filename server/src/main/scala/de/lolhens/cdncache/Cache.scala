@@ -28,10 +28,19 @@ class Cache(
              client: Client[IO],
              cdnUri: Uri,
              cachePath: Path,
-             modeRef: Ref[IO, Mode]
+             val modeRef: Ref[IO, Mode]
            ) {
-  def listEntries: Stream[IO, Path] =
-    Files[IO].list(Fs2Path.fromNioPath(cachePath)).map(_.toNioPath)
+  def listEntries: Stream[IO, CacheEntry] =
+    Files[IO].list(Fs2Path.fromNioPath(cachePath)).parEvalMap(8)(path =>
+      Files[IO].readAll(path).takeWhile(_ != '\n').through(fs2.text.utf8.decode).compile.string.map { metadataString =>
+        val metadata = decode[CacheObjectMetadata](metadataString).toTry.get
+        CacheEntry(
+          uri = ByteVector.fromValidBase64(path.fileName.toString).decodeUtf8.toTry.get,
+          contentType = metadata.contentType.map(Header[`Content-Type`].value),
+          contentLength = metadata.contentLength
+        )
+      }
+    )
 
   private def span[F[_], O](stream: Stream[F, O])(f: O => Boolean): Stream[F, (Chunk[O], Stream[F, O])] = {
     def go(buffer: Chunk[O], s: Stream[F, O]): Pull[F, (Chunk[O], Stream[F, O]), Unit] =
