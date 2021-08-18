@@ -2,6 +2,7 @@ package de.lolhens.cdncache
 
 import cats.effect._
 import cats.syntax.semigroupk._
+import com.github.markusbernhardt.proxy.ProxySearch
 import io.circe.Json
 import io.circe.syntax._
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -13,6 +14,7 @@ import org.http4s.server.staticcontent.WebjarService.WebjarAsset
 import org.http4s.server.staticcontent.{ResourceServiceBuilder, WebjarServiceBuilder}
 import org.http4s.{HttpRoutes, Uri}
 
+import java.net.ProxySelector
 import java.nio.file.{Path, Paths}
 
 object Server extends IOApp {
@@ -24,6 +26,12 @@ object Server extends IOApp {
 
   private def applicationResource(cacheUri: Uri, cachePath: Path): Resource[IO, Unit] =
     for {
+      _ <- Resource.eval(IO {
+        ProxySelector.setDefault(
+          Option(ProxySearch.getDefaultProxySearch.getProxySelector)
+            .getOrElse(ProxySelector.getDefault)
+        )
+      })
       ec <- Resource.eval(IO.executionContext)
       modeRef <- Resource.eval(Ref[IO].of(Mode(record = false)))
       cache <- Cache(cacheUri, cachePath, modeRef)

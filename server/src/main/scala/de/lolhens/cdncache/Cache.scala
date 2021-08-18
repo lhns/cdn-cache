@@ -4,7 +4,6 @@ import cats.data.OptionT
 import cats.effect.kernel.Resource
 import cats.effect.std.Queue
 import cats.effect.{IO, Ref}
-import com.github.markusbernhardt.proxy.ProxySearch
 import de.lolhens.cdncache.Cache.CacheObjectMetadata
 import de.lolhens.fs2.utils.Fs2Utils._
 import de.lolhens.http4s.brotli.BrotliMiddleware
@@ -21,7 +20,6 @@ import org.http4s.jdkhttpclient.JdkHttpClient
 import org.http4s.{Header, HttpRoutes, StaticFile, Uri}
 import scodec.bits.ByteVector
 
-import java.net.{ProxySelector, http}
 import java.nio.file.Path
 
 class Cache(
@@ -68,6 +66,7 @@ class Cache(
         val path = cachePath.resolve(ByteVector.encodeUtf8(uriPath.toAbsolute.renderString).toTry.get.toBase64UrlNoPad)
         OptionT.liftF(Files[IO].exists(path)).flatMap { cached =>
           if (cached) {
+            // The requested resource was cached
             StaticFile.fromFile(path.toFile, Some(request)).semiflatMap { response =>
               for {
                 queue <- Queue.bounded[IO, Option[Chunk[Byte]]](1)
@@ -94,8 +93,10 @@ class Cache(
                 newResponse
             }
           } else {
+            // The requested resource was not cached
             OptionT.liftF(modeRef.get).flatMap(mode =>
               if (mode.record) {
+                // The requested resource should be fetched and cached
                 OptionT.liftF(
                   client.toHttpApp(request.withDestination(
                     request.uri.withSchemeAndAuthority(cdnUri)
@@ -118,6 +119,7 @@ class Cache(
                     ))
                 )
               } else {
+                // The requested resource was not found
                 OptionT.none
               }
             )
@@ -128,27 +130,13 @@ class Cache(
 }
 
 object Cache {
-  private lazy val proxySelector =
-    Option(ProxySearch.getDefaultProxySearch.getProxySelector).getOrElse(ProxySelector.getDefault)
-
   def apply(
              cdnUri: Uri,
              cachePath: Path,
              modeRef: Ref[IO, Mode]
            ): Resource[IO, Cache] =
     for {
-      client <- JdkHttpClient[IO](
-        http.HttpClient.newBuilder()
-          .sslParameters {
-            val params = javax.net.ssl.SSLContext.getDefault.getDefaultSSLParameters
-            // workaround for https://github.com/http4s/http4s-jdk-http-client/issues/200
-            if (Runtime.version().feature() == 11)
-              params.setProtocols(params.getProtocols.filter(_ != "TLSv1.3"))
-            params
-          }
-          .proxy(proxySelector)
-          .build()
-      )
+      client <- JdkHttpClient.simple[IO]
     } yield
       new Cache(client, cdnUri, cachePath, modeRef)
 
