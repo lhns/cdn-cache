@@ -11,7 +11,10 @@ import org.http4s.server.Router
 import org.http4s.server.staticcontent.WebjarService.WebjarAsset
 import org.http4s.server.staticcontent.{ResourceServiceBuilder, WebjarServiceBuilder}
 
-class UiRoutes(cache: Cache) {
+class UiRoutes(
+                cache: FsCacheMiddleware,
+                appConfig: AppConfig,
+              ) {
   val toRoutes: HttpRoutes[IO] = {
     import org.http4s.dsl.io._
     Router(
@@ -42,8 +45,10 @@ class UiRoutes(cache: Cache) {
       },
 
       "/" -> HttpRoutes.of {
-        case request@GET -> Root =>
-          Ok(MainPage())
+        case GET -> Root =>
+          Ok(MainPage(Map(
+            "appconfig" -> appConfig.asJson
+          )))
       }
     )
   }

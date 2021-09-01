@@ -25,11 +25,15 @@ object MainPage {
     raw(json.spaces2)
   )
 
-  def apply(): Tag = html(
+  def apply(metaAttributes: Map[String, Json] = Map.empty): Tag = html(
     head(
       meta(charset := "utf-8"),
       tag("title")("CDN Cache Config"),
       meta(name := "viewport", content := "width=device-width, initial-scale=1"),
+    )(
+      metaAttributes.map {
+        case (key, value) => meta(name := key, content := value.noSpaces)
+      }.toSeq: _*
     ),
     body(
       link(

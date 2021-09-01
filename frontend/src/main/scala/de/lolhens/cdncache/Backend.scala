@@ -4,12 +4,23 @@ import cats.effect.IO
 import io.circe.syntax._
 import io.circe.{Json, parser}
 import japgolly.scalajs.react.extra.Ajax
+import org.scalajs.dom.document
 import scodec.bits.ByteVector
 
+import scala.scalajs.js
 import scala.scalajs.js.typedarray.{ArrayBuffer, TypedArrayBuffer}
 import scala.util.chaining.scalaUtilChainingOps
 
 object Backend {
+  private def getMetaString(name: String): String =
+    document.querySelector(s"""meta[name="$name"]""").asInstanceOf[js.Dynamic].content.toString
+
+  private def getMetaJson(name: String): Json =
+    io.circe.parser.parse(getMetaString(name)).toTry.get
+
+  lazy val appConfig: AppConfig =
+    getMetaJson("appconfig").as[AppConfig].toTry.get
+
   private def request(
                        method: String,
                        url: String,

@@ -37,6 +37,7 @@ object MainComponent {
 
       <.div(
         ^.cls := "container my-4 d-flex flex-column",
+        <.h2(^.cls := "align-self-center mb-4", Backend.appConfig.cdnUri),
         <.input(
           ^.id := "search",
           ^.cls := "align-self-center form-control mb-4",
@@ -59,7 +60,9 @@ object MainComponent {
                   $.modStateAsync(_.copy(mode = Some(newMode))) >>
                     Backend.setMode(newMode)
                 })
-          }
+          },
+          <.div(^.cls := "flex-fill"),
+          <.div(s"Memory cache ${if (Backend.appConfig.enableMemCache) "enabled" else "disabled"}")
         ),
         <.table(^.cls := "table",
           <.thead(
