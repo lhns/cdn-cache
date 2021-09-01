@@ -20,9 +20,19 @@ object Server extends IOApp {
         .getOrElse(ProxySelector.getDefault)
     )
 
+    val cdnUri = Uri.unsafeFromString(
+      Option(System.getenv("CDN_URI"))
+        .getOrElse(throw new IllegalArgumentException("Missing variable: CDN_URI"))
+    )
+
+    val cachePath = Paths.get(
+      Option(System.getenv("CACHE_PATH"))
+        .getOrElse(throw new IllegalArgumentException("Missing variable: CACHE_PATH"))
+    )
+
     applicationResource(
-      Uri.unsafeFromString(args(0)),
-      Paths.get(args(1))
+      cdnUri,
+      cachePath
     ).use(_ => IO.never)
   }
 
