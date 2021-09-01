@@ -76,7 +76,7 @@ object MainPage {
         )
       ),
       div(id := "root"),
-      script(tpe := "module", src := Server.webjarUri(frontendWebjarAsset))
+      script(tpe := "module", src := UiRoutes.webjarUri(frontendWebjarAsset))
     )
   )
 }

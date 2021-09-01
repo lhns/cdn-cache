@@ -62,9 +62,14 @@ class Cache(
   def toRoutes: HttpRoutes[IO] = {
     import org.http4s.dsl.io._
     HttpRoutes {
+      case GET -> Root / "health" =>
+        OptionT.liftF(Ok())
+
       case request@GET -> uriPath =>
         val path = cachePath.resolve(ByteVector.encodeUtf8(uriPath.toAbsolute.renderString).toTry.get.toBase64UrlNoPad)
-        OptionT.liftF(Files[IO].exists(path)).flatMap { cached =>
+        val fs2Path = fs2.io.file.Path.fromNioPath(path)
+
+        OptionT.liftF(Files[IO].exists(fs2Path)).flatMap { cached =>
           if (cached) {
             // The requested resource was cached
             StaticFile.fromFile(path.toFile, Some(request)).semiflatMap { response =>
@@ -110,7 +115,7 @@ class Cache(
                         )
 
                         for {
-                          _ <- Files[IO].writeAll(path)(
+                          _ <- Files[IO].writeAll(fs2Path)(
                             Stream(metadata.asJson.noSpaces + "\n").through(fs2.text.utf8.encode) ++
                               stream
                           ).compile.drain
