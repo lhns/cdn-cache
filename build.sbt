@@ -1,5 +1,6 @@
 ThisBuild / scalaVersion := "2.13.6"
 ThisBuild / name := (server / name).value
+name := (ThisBuild / name).value
 
 lazy val commonSettings: Seq[Setting[_]] = Seq(
   version := {
@@ -10,8 +11,6 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
 
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
 )
-
-name := (ThisBuild / name).value
 
 lazy val root = project.in(file("."))
   .settings(
@@ -85,4 +84,17 @@ lazy val server = project
       "frontendName" -> (frontend / normalizedName).value,
       "frontendVersion" -> (frontend / version).value,
     ),
+
+    assembly / assemblyJarName := s"${name.value}-${version.value}.sh.bat",
+
+    assembly / assemblyOption := (assembly / assemblyOption).value
+      .withPrependShellScript(Some(AssemblyPlugin.defaultUniversalScript(shebang = false))),
+
+    assembly / assemblyMergeStrategy := {
+      case PathList(paths@_*) if paths.last == "module-info.class" => MergeStrategy.discard
+      case PathList("META-INF", "jpms.args") => MergeStrategy.discard
+      case x =>
+        val oldStrategy = (assembly / assemblyMergeStrategy).value
+        oldStrategy(x)
+    },
   )
