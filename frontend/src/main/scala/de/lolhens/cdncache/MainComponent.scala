@@ -65,8 +65,8 @@ object MainComponent {
           <.thead(
             <.tr(
               <.th(^.scope := "col", "URI"),
-              <.th(^.scope := "col", "ContentType"),
-              <.th(^.scope := "col", "ContentLength"),
+              <.th(^.scope := "col", "Content-Type"),
+              <.th(^.scope := "col", "Content-Length"),
             )
           ),
           <.tbody(
