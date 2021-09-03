@@ -46,9 +46,12 @@ class UiRoutes(
 
       "/" -> HttpRoutes.of {
         case GET -> Root =>
-          Ok(MainPage(Map(
-            "appconfig" -> appConfig.asJson
-          )))
+          Ok(MainPage(
+            title = "CDN Cache Config",
+            metaAttributes = Map(
+              "appconfig" -> appConfig.asJson.noSpaces
+            )
+          ))
       }
     )
   }

@@ -20,7 +20,7 @@ lazy val root = project.in(file("."))
 
 val circeVersion = "0.14.1"
 val doobieVersion = "1.0.0-M5"
-val http4sVersion = "0.23.1"
+val http4sVersion = "0.23.3"
 val scalajsReactVersion = "2.0.0-RC2"
 
 lazy val common = crossProject(JVMPlatform, JSPlatform)
