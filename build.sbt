@@ -58,9 +58,15 @@ lazy val frontend = project
     scalaJSUseMainModuleInitializer := true,
   )
 
+lazy val frontendWebjar = frontend.webjar
+  .settings(
+    webjarAssetReferenceType := Some("http4s"),
+    libraryDependencies += "org.http4s" %% "http4s-server" % http4sVersion,
+  )
+
 lazy val server = project
   .enablePlugins(BuildInfoPlugin)
-  .dependsOn(commonJvm, frontend.webjar)
+  .dependsOn(commonJvm, frontendWebjar)
   .settings(commonSettings)
   .settings(
     name := "cdn-cache",
@@ -77,12 +83,6 @@ lazy val server = project
       "org.http4s" %% "http4s-scalatags" % http4sVersion,
       "org.http4s" %% "http4s-client" % http4sVersion,
       "org.http4s" %% "http4s-jdk-http-client" % "0.5.0",
-    ),
-
-    buildInfoKeys := Seq(
-      "frontendAsset" -> (frontend / Compile / webjarMainResourceName).value,
-      "frontendName" -> (frontend / normalizedName).value,
-      "frontendVersion" -> (frontend / version).value,
     ),
 
     assembly / assemblyJarName := s"${name.value}-${version.value}.sh.bat",

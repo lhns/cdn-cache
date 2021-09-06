@@ -1,19 +1,11 @@
 package de.lolhens.cdncache
 
-import buildinfo.BuildInfo
 import io.circe.Json
-import org.http4s.server.staticcontent.WebjarService.WebjarAsset
 import scalatags.Text.all._
 
 import scala.language.implicitConversions
 
 object MainPage {
-  private lazy val frontendWebjarAsset: WebjarAsset = WebjarAsset(
-    BuildInfo.frontendName,
-    BuildInfo.frontendVersion,
-    BuildInfo.frontendAsset
-  )
-
   private val integrity = attr("integrity")
   private val crossorigin = attr("crossorigin")
   private val async = attr("async").empty
@@ -81,7 +73,7 @@ object MainPage {
         )
       ),
       div(id := "root"),
-      script(tpe := "module", src := UiRoutes.webjarUri(frontendWebjarAsset))
+      script(tpe := "module", src := UiRoutes.webjarUri(webjars.frontend.webjarAsset))
     )
   )
 }
