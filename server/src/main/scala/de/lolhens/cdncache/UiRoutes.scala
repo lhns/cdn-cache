@@ -2,11 +2,12 @@ package de.lolhens.cdncache
 
 import cats.effect.IO
 import cats.syntax.semigroupk._
+import de.lolhens.http4s.spa.{ImportMap, ResourceBundle, SinglePageApp, Stylesheet}
 import io.circe.Json
 import io.circe.syntax._
 import org.http4s.HttpRoutes
 import org.http4s.circe._
-import org.http4s.scalatags._
+import org.http4s.implicits._
 import org.http4s.server.Router
 import org.http4s.server.staticcontent.WebjarService.WebjarAsset
 import org.http4s.server.staticcontent.{ResourceServiceBuilder, WebjarServiceBuilder}
@@ -15,6 +16,16 @@ class UiRoutes(
                 cache: FsCacheMiddleware,
                 appConfig: AppConfig,
               ) {
+  private val mainPage = SinglePageApp(
+    webjar = uri"/assets/" -> webjars.frontend.webjarAsset,
+    importMap = ImportMap.react17,
+    resourceBundles = Seq(
+      ResourceBundle.bootstrap5,
+      ResourceBundle.bootstrapIcons1,
+      ResourceBundle(stylesheets = Seq(Stylesheet(uri"/assets/main.css")))
+    )
+  )
+
   val toRoutes: HttpRoutes[IO] = {
     import org.http4s.dsl.io._
     Router(
@@ -46,7 +57,7 @@ class UiRoutes(
 
       "/" -> HttpRoutes.of {
         case GET -> Root =>
-          Ok(MainPage(
+          IO(mainPage(
             title = "CDN Cache Config",
             metaAttributes = Map(
               "appconfig" -> appConfig.asJson.noSpaces
