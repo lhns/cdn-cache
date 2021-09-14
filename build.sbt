@@ -76,7 +76,7 @@ lazy val server = project
       "de.lolhens" %% "fs2-utils" % "0.2.0",
       "de.lolhens" %% "http4s-brotli" % "0.4.0",
       "de.lolhens" %% "http4s-proxy" % "0.4.0",
-      "de.lolhens" %% "http4s-spa" % "0.0.1",
+      "de.lolhens" %% "http4s-spa" % "0.2.0",
       "org.bidib.com.github.markusbernhardt" % "proxy-vole" % "1.0.15",
       "org.http4s" %% "http4s-blaze-server" % http4sVersion,
       "org.http4s" %% "http4s-circe" % http4sVersion,

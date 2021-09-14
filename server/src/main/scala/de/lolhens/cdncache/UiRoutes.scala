@@ -1,38 +1,44 @@
 package de.lolhens.cdncache
 
+import cats.data.Kleisli
 import cats.effect.IO
-import cats.syntax.semigroupk._
-import de.lolhens.http4s.spa.{ImportMap, ResourceBundle, SinglePageApp, Stylesheet}
+import cats.syntax.option._
+import de.lolhens.http4s.spa._
 import io.circe.Json
 import io.circe.syntax._
-import org.http4s.HttpRoutes
 import org.http4s.circe._
-import org.http4s.implicits._
 import org.http4s.server.Router
-import org.http4s.server.staticcontent.WebjarService.WebjarAsset
-import org.http4s.server.staticcontent.{ResourceServiceBuilder, WebjarServiceBuilder}
+import org.http4s.server.staticcontent.ResourceServiceBuilder
+import org.http4s.{HttpRoutes, Uri}
 
 class UiRoutes(
                 cache: FsCacheMiddleware,
                 appConfig: AppConfig,
               ) {
-  private val mainPage = SinglePageApp(
-    webjar = uri"/assets/" -> webjars.frontend.webjarAsset,
-    importMap = ImportMap.react17,
-    resourceBundles = Seq(
-      ResourceBundle.bootstrap5,
-      ResourceBundle.bootstrapIcons1,
-      ResourceBundle(stylesheets = Seq(Stylesheet(uri"/assets/main.css")))
-    )
+  private val app = SinglePageApp(
+    title = "CDN Cache Config",
+    metaAttributes = Map(
+      "appconfig" -> appConfig.asJson.noSpaces
+    ),
+    webjar = webjars.frontend.webjarAsset,
+    dependencies = Seq(
+      SpaDependencies.react17,
+      SpaDependencies.bootstrap5,
+      SpaDependencies.bootstrapIcons1,
+      SpaDependencies.mainCss
+    ),
+  )
+
+  private val appController = SinglePageAppController[IO](
+    mountPoint = Uri.Root,
+    controller = Kleisli.pure(app),
+    resourceServiceBuilder = ResourceServiceBuilder[IO]("/assets").some
   )
 
   val toRoutes: HttpRoutes[IO] = {
     import org.http4s.dsl.io._
     Router(
-      "/assets" -> {
-        (WebjarServiceBuilder[IO].toRoutes: HttpRoutes[IO]) <+>
-          ResourceServiceBuilder[IO]("/assets").toRoutes
-      },
+      "/" -> appController.toRoutes,
 
       "/api" -> HttpRoutes.of {
         case GET -> Root / "mode" =>
@@ -54,21 +60,6 @@ class UiRoutes(
             response <- Ok(entries.asJson)
           } yield response
       },
-
-      "/" -> HttpRoutes.of {
-        case GET -> Root =>
-          IO(mainPage(
-            title = "CDN Cache Config",
-            metaAttributes = Map(
-              "appconfig" -> appConfig.asJson.noSpaces
-            )
-          ))
-      }
     )
   }
-}
-
-object UiRoutes {
-  def webjarUri(asset: WebjarAsset) =
-    s"assets/${asset.library}/${asset.version}/${asset.asset}"
 }

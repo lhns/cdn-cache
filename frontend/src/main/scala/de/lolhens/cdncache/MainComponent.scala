@@ -48,7 +48,7 @@ object MainComponent {
             $.modState(_.copy(filter = value))
           }
         ),
-        <.div(^.cls := "d-flex flex-row",
+        <.div(^.cls := "d-flex flex-row mb-3",
           state.mode match {
             case None => "Loading..."
             case Some(mode) =>
