@@ -5,7 +5,7 @@ ARG CI_VERSION
 RUN sbt assembly
 RUN cp "$(find server/target/scala-* -type f -name '*.sh.bat')" /tmp/app
 
-FROM openjdk:16
+FROM openjdk:17
 
 COPY --from=builder /tmp/app /opt/app
 
