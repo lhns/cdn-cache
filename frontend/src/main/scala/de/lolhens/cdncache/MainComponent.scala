@@ -37,18 +37,24 @@ object MainComponent {
 
       <.div(
         ^.cls := "container my-4 d-flex flex-column",
-        <.h2(^.cls := "align-self-center mb-4", Backend.appConfig.cdnUri),
-        <.input(
-          ^.id := "search",
-          ^.cls := "align-self-center form-control mb-4",
-          ^.tpe := "text",
-          ^.placeholder := "Search...",
-          ^.onChange ==> { e: ReactEventFromInput =>
-            val value = e.target.value
-            $.modState(_.copy(filter = value))
-          }
+        Backend.appConfig.cdns.sortBy(_.routeUri).toVdomArray(cdn =>
+          <.div(
+            ^.key := cdn.routeUri,
+            ^.cls := "d-flex flex-row",
+            <.h3(
+              ^.cls := "align-self-center",
+              cdn.routeUri
+            ),
+            <.div(^.cls := "flex-fill"),
+            <.div(
+              ^.cls := "d-flex flex-column align-items-end mb-2",
+              <.h4(^.cls := "mb-0", cdn.uri),
+              <.div(s"Memory cache ${if (cdn.enableMemCache) "enabled" else "disabled"}")
+            )
+          )
         ),
-        <.div(^.cls := "d-flex flex-row mb-3",
+        <.div(^.cls := "d-flex flex-row mt-4 mb-4",
+          <.div(^.cls := "flex-fill"),
           state.mode match {
             case None => "Loading..."
             case Some(mode) =>
@@ -60,9 +66,17 @@ object MainComponent {
                   $.modStateAsync(_.copy(mode = Some(newMode))) >>
                     Backend.setMode(newMode)
                 })
-          },
-          <.div(^.cls := "flex-fill"),
-          <.div(s"Memory cache ${if (Backend.appConfig.enableMemCache) "enabled" else "disabled"}")
+          }
+        ),
+        <.input(
+          ^.id := "search",
+          ^.cls := "align-self-center form-control mb-3",
+          ^.tpe := "text",
+          ^.placeholder := "Search...",
+          ^.onChange ==> { e: ReactEventFromInput =>
+            val value = e.target.value
+            $.modState(_.copy(filter = value))
+          }
         ),
         <.table(^.cls := "table",
           <.thead(

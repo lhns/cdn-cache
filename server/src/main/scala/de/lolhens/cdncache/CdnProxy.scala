@@ -1,23 +1,22 @@
 package de.lolhens.cdncache
 
-import cats.effect.IO
-import cats.effect.kernel.Resource
+import cats.effect.kernel.Async
+import cats.syntax.functor._
 import de.lolhens.http4s.brotli.BrotliMiddleware
 import de.lolhens.http4s.proxy.Http4sProxy._
 import org.http4s.client.Client
-import org.http4s.jdkhttpclient.JdkHttpClient
 import org.http4s.{HttpRoutes, Uri}
 
-class CdnProxy(
-                client: Client[IO],
-                cdnUri: Uri,
-              ) {
-  val toRoutes: HttpRoutes[IO] = {
+class CdnProxy[F[_] : Async](
+                              client: Client[F],
+                              cdnUri: Uri,
+                            ) {
+  val toRoutes: HttpRoutes[F] = {
     val httpApp = client.toHttpApp
 
     HttpRoutes.of { request =>
       val newRequest = request.withDestination(
-        request.uri.withSchemeAndAuthority(cdnUri)
+        request.uri.withPath(request.pathInfo).withSchemeAndAuthority(cdnUri)
       )
 
       httpApp(newRequest)
@@ -27,9 +26,9 @@ class CdnProxy(
 }
 
 object CdnProxy {
-  def apply(cdnUri: Uri): Resource[IO, CdnProxy] =
-    for {
-      client <- JdkHttpClient.simple[IO]
-    } yield
-      new CdnProxy(client, cdnUri)
+  def apply[F[_] : Async](
+                           client: Client[F],
+                           cdnUri: Uri,
+                         ): CdnProxy[F] =
+    new CdnProxy(client, cdnUri)
 }

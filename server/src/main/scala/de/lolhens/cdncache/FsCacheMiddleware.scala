@@ -3,6 +3,7 @@ package de.lolhens.cdncache
 import cats.data.OptionT
 import cats.effect.std.Queue
 import cats.effect.{IO, Ref}
+import cats.syntax.option._
 import de.lolhens.cdncache.FsCacheMiddleware.CacheObjectMetadata
 import de.lolhens.fs2.utils.Fs2Utils._
 import fs2.io.file.{Files, Path => Fs2Path}
@@ -18,16 +19,16 @@ import scodec.bits.ByteVector
 
 import java.nio.file.Path
 
-class FsCacheMiddleware(
-                         cachePath: Path,
-                         val modeRef: Ref[IO, Mode]
-                       ) {
+class FsCacheMiddleware private(
+                                 cachePath: Path,
+                                 val modeRef: Ref[IO, Mode]
+                               ) {
   def listEntries: Stream[IO, CacheEntry] =
     Files[IO].list(Fs2Path.fromNioPath(cachePath)).parEvalMap(8)(path =>
       Files[IO].readAll(path).takeWhile(_ != '\n').through(fs2.text.utf8.decode).compile.string.map { metadataString =>
         val metadata = decode[CacheObjectMetadata](metadataString).toTry.get
         CacheEntry(
-          uri = ByteVector.fromValidBase64(path.fileName.toString).decodeUtf8.toTry.get,
+          uri = metadata.uri.getOrElse("<unknown>"),
           contentType = metadata.contentType.map(Header[`Content-Type`].value),
           contentLength = metadata.contentLength
         )
@@ -54,14 +55,15 @@ class FsCacheMiddleware(
   }
 
   def apply(routes: HttpRoutes[IO]): HttpRoutes[IO] = HttpRoutes {
-    case request@GET -> uriPath =>
-      val path = cachePath.resolve(ByteVector.encodeUtf8(uriPath.toAbsolute.renderString).toTry.get.toBase64UrlNoPad)
-      val fs2Path = fs2.io.file.Path.fromNioPath(path)
+    case request@GET -> _ =>
+      val path = request.uri.path.toAbsolute.renderString
+      val pathKey = cachePath.resolve(ByteVector.encodeUtf8(path).toTry.get.sha256.toBase64UrlNoPad)
+      val fs2Path = fs2.io.file.Path.fromNioPath(pathKey)
 
       OptionT.liftF(Files[IO].exists(fs2Path))
         .filter(cached => cached) // The requested resource was cached
         .flatMap { _ =>
-          StaticFile.fromFile(path.toFile, Some(request)).semiflatMap { response =>
+          StaticFile.fromFile(pathKey.toFile, Some(request)).semiflatMap { response =>
             for {
               queue <- Queue.bounded[IO, Option[Chunk[Byte]]](1)
               _ <- span(response.body)(_ == '\n').flatMap {
@@ -97,6 +99,7 @@ class FsCacheMiddleware(
                 response.withBodyStream(
                   response.body.extract { stream =>
                     val metadata = CacheObjectMetadata(
+                      uri = path.some,
                       contentType = response.contentType,
                       contentLength = response.contentLength
                     )
@@ -126,6 +129,7 @@ object FsCacheMiddleware {
     new FsCacheMiddleware(cachePath, modeRef)
 
   case class CacheObjectMetadata(
+                                  uri: Option[String],
                                   contentType: Option[`Content-Type`],
                                   contentLength: Option[Long]
                                 )
