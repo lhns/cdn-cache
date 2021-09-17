@@ -8,6 +8,8 @@ import japgolly.scalajs.react.util.EffectCatsEffect._
 import japgolly.scalajs.react.vdom.VdomElement
 import japgolly.scalajs.react.vdom.html_<^._
 
+import scala.concurrent.duration._
+
 object MainComponent {
   case class Props()
 
@@ -22,7 +24,7 @@ object MainComponent {
   }
 
   class Backend($: BackendScope[Props, State]) {
-    def componentDidMount: IO[Unit] =
+    private def fetchState: IO[Unit] =
       for {
         modeFiber <- Backend.mode.start
         entriesFiber <- Backend.cacheEntries.start
@@ -31,6 +33,14 @@ object MainComponent {
         entries <- entriesFiber.joinWithNever
         _ <- $.modStateAsync(_.copy(entries = Some(entries)))
       } yield ()
+
+    def componentDidMount: IO[Unit] = {
+      lazy val tick: IO[Unit] =
+        fetchState >>
+          tick.delayBy(8.seconds)
+
+      tick
+    }
 
     def render: VdomElement = {
       val state = $.state.unsafeRunSync()
@@ -59,23 +69,18 @@ object MainComponent {
             case None => "Loading..."
             case Some(mode) =>
               <.button(^.cls := s"btn btn-${if (mode.record) "danger" else "primary"}",
-                if (mode.record) "Stop Recording"
-                else "Start Recording",
-                ^.onClick --> IO.defer {
+                if (mode.record) <.div(
+                  "Stop Recording",
+                  <.i(^.cls := "bi bi-stop-fill ms-2")
+                ) else <.div(
+                  "Start Recording",
+                  <.i(^.cls := "bi bi-record-fill ms-2")
+                ),
+                ^.onClick --> {
                   val newMode = mode.copy(record = !mode.record)
                   $.modStateAsync(_.copy(mode = Some(newMode))) >>
                     Backend.setMode(newMode)
                 })
-          }
-        ),
-        <.input(
-          ^.id := "search",
-          ^.cls := "align-self-center form-control mb-3",
-          ^.tpe := "text",
-          ^.placeholder := "Search...",
-          ^.onChange ==> { e: ReactEventFromInput =>
-            val value = e.target.value
-            $.modState(_.copy(filter = value))
           }
         ),
         <.table(^.cls := "table",
@@ -84,17 +89,42 @@ object MainComponent {
               <.th(^.scope := "col", "URI"),
               <.th(^.scope := "col", "Content-Type"),
               <.th(^.scope := "col", "Content-Length"),
+              <.th(^.scope := "col", ^.width := "0"),
             )
           ),
           <.tbody(
-            {
+            <.tr(
+              <.td(
+                ^.colSpan := 4,
+                <.input(
+                  ^.id := "search",
+                  ^.cls := "align-self-center form-control",
+                  ^.tpe := "text",
+                  ^.placeholder := "Search...",
+                  ^.onChange ==> { e: ReactEventFromInput =>
+                    val value = e.target.value
+                    $.modState(_.copy(filter = value))
+                  }
+                )
+              )
+            ), {
               val filterLowerCase = state.filter.toLowerCase
               state.entries.getOrElse(Seq.empty).filter(_.uri.toLowerCase.contains(filterLowerCase))
             }.toVdomArray { entry =>
               <.tr(
+                ^.key := entry.uri,
                 <.th(^.scope := "row", entry.uri),
                 <.td(entry.contentType),
                 <.td(entry.contentLength.map(_ + " B")),
+                <.td(
+                  <.button(^.cls := "btn btn-danger",
+                    <.i(^.cls := "bi bi-trash-fill"),
+                    ^.onClick --> {
+                      Backend.deleteEntry(entry.uri) >>
+                        fetchState
+                    }
+                  )
+                ),
               )
             }
           )

@@ -51,7 +51,14 @@ class UiRoutes(
           for {
             mode <- request.as[Json].map(_.as[Mode].toTry.get)
             _ <- cache.modeRef.set(mode)
-            response <- Ok("")
+            response <- Ok()
+          } yield response
+
+        case request@POST -> Root / "cache" / "entries" / "delete" =>
+          for {
+            uriPath <- request.as[Json].map(_.as[String].toTry.get)
+            _ <- cache.deleteEntry(uriPath)
+            response <- Ok()
           } yield response
 
         case GET -> Root / "cache" / "entries" =>

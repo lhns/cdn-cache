@@ -9,6 +9,7 @@ import scodec.bits.ByteVector
 
 import scala.scalajs.js
 import scala.scalajs.js.typedarray.{ArrayBuffer, TypedArrayBuffer}
+import scala.util.Success
 import scala.util.chaining.scalaUtilChainingOps
 
 object Backend {
@@ -48,7 +49,10 @@ object Backend {
                            json: Option[Json]
                          ): IO[Json] =
     request(method, url, json).map(bytes =>
-      bytes.decodeUtf8.toTry.flatMap(parser.parse(_).toTry).get
+      bytes.decodeUtf8.toTry.flatMap { string =>
+        if (string.isEmpty) Success(Json.obj())
+        else parser.parse(string).toTry
+      }.get
     )
 
   def mode: IO[Mode] =
@@ -56,6 +60,9 @@ object Backend {
 
   def setMode(mode: Mode): IO[Unit] =
     jsonRequest("POST", "/api/mode", Some(mode.asJson)).void
+
+  def deleteEntry(uriPath: String): IO[Unit] =
+    jsonRequest("POST", "/api/cache/entries/delete", Some(uriPath.asJson)).void
 
   def cacheEntries: IO[Seq[CacheEntry]] =
     jsonRequest("GET", "/api/cache/entries", None).map(_.as[Seq[CacheEntry]].toTry.get)

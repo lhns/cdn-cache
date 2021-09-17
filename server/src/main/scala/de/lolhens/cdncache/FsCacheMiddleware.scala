@@ -35,6 +35,9 @@ class FsCacheMiddleware private(
       }
     )
 
+  def deleteEntry(uriPath: String): IO[Unit] =
+    Files[IO].delete(fs2.io.file.Path.fromNioPath(getCachePath(uriPath)))
+
   private def span[F[_], O](stream: Stream[F, O])(f: O => Boolean): Stream[F, (Chunk[O], Stream[F, O])] = {
     def go(buffer: Chunk[O], s: Stream[F, O]): Pull[F, (Chunk[O], Stream[F, O]), Unit] =
       s.pull.uncons.flatMap {
@@ -54,16 +57,19 @@ class FsCacheMiddleware private(
     go(Chunk.empty, stream).stream
   }
 
+  private def getCachePath(uriPath: String): Path =
+    cachePath.resolve(ByteVector.encodeUtf8(uriPath).toTry.get.sha256.toBase64UrlNoPad)
+
   def apply(routes: HttpRoutes[IO]): HttpRoutes[IO] = HttpRoutes {
     case request@GET -> _ =>
-      val path = request.uri.path.toAbsolute.renderString
-      val pathKey = cachePath.resolve(ByteVector.encodeUtf8(path).toTry.get.sha256.toBase64UrlNoPad)
-      val fs2Path = fs2.io.file.Path.fromNioPath(pathKey)
+      val uriPath = request.uri.path.toAbsolute.renderString
+      val cachePath = getCachePath(uriPath)
+      val fs2CachePath = fs2.io.file.Path.fromNioPath(cachePath)
 
-      OptionT.liftF(Files[IO].exists(fs2Path))
+      OptionT.liftF(Files[IO].exists(fs2CachePath))
         .filter(cached => cached) // The requested resource was cached
         .flatMap { _ =>
-          StaticFile.fromFile(pathKey.toFile, Some(request)).semiflatMap { response =>
+          StaticFile.fromFile(cachePath.toFile, Some(request)).semiflatMap { response =>
             for {
               queue <- Queue.bounded[IO, Option[Chunk[Byte]]](1)
               _ <- span(response.body)(_ == '\n').flatMap {
@@ -99,13 +105,13 @@ class FsCacheMiddleware private(
                 response.withBodyStream(
                   response.body.extract { stream =>
                     val metadata = CacheObjectMetadata(
-                      uri = path.some,
+                      uri = uriPath.some,
                       contentType = response.contentType,
                       contentLength = response.contentLength
                     )
 
                     for {
-                      _ <- Files[IO].writeAll(fs2Path)(
+                      _ <- Files[IO].writeAll(fs2CachePath)(
                         Stream(metadata.asJson.noSpaces + "\n").through(fs2.text.utf8.encode) ++
                           stream
                       ).compile.drain
