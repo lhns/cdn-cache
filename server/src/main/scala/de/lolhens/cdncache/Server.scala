@@ -1,6 +1,7 @@
 package de.lolhens.cdncache
 
 import cats.effect._
+import cats.syntax.semigroupk._
 import com.github.markusbernhardt.proxy.ProxySearch
 import de.lolhens.cdncache.AppConfig.CdnConfig
 import io.circe.syntax._
@@ -86,7 +87,7 @@ object Server extends IOApp {
 
       _ <- BlazeServerBuilder[IO](ec)
         .bindHttp(8080, "0.0.0.0")
-        .withHttpApp(proxyRoutes.orNotFound)
+        .withHttpApp((healthRoutes <+> proxyRoutes).orNotFound)
         .resource
 
       _ <- BlazeServerBuilder[IO](ec)
