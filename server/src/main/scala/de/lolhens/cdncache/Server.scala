@@ -4,6 +4,7 @@ import cats.effect._
 import cats.syntax.semigroupk._
 import com.github.markusbernhardt.proxy.ProxySearch
 import de.lolhens.cdncache.AppConfig.CdnConfig
+import io.circe.parser.{decode => decodeJson}
 import io.circe.syntax._
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -21,17 +22,15 @@ object Server extends IOApp {
   private[this] val logger = getLogger
 
   override def run(args: List[String]): IO[ExitCode] = {
-    synchronized {
-      ProxySelector.setDefault(
-        Option(new ProxySearch().tap { s =>
-          s.addStrategy(ProxySearch.Strategy.JAVA)
-          s.addStrategy(ProxySearch.Strategy.ENV_VAR)
-        }.getProxySelector)
-          .getOrElse(ProxySelector.getDefault)
-      )
-    }
+    ProxySelector.setDefault(
+      Option(new ProxySearch().tap { s =>
+        s.addStrategy(ProxySearch.Strategy.JAVA)
+        s.addStrategy(ProxySearch.Strategy.ENV_VAR)
+      }.getProxySelector)
+        .getOrElse(ProxySelector.getDefault)
+    )
 
-    val cdnSettings: Map[String, CdnSettings] = io.circe.parser.decode[Map[String, CdnSettings]](
+    val cdnSettings: Map[String, CdnSettings] = decodeJson[Map[String, CdnSettings]](
       Option(System.getenv("CDN_SETTINGS"))
         .getOrElse(throw new IllegalArgumentException("Missing variable: CDN_SETTINGS"))
     ).toTry.get
@@ -57,7 +56,6 @@ object Server extends IOApp {
                                    cachePath: Path,
                                  ): Resource[IO, Unit] =
     for {
-      ec <- Resource.eval(IO.executionContext)
       modeRef <- Resource.eval(Ref[IO].of(Mode(record = false)))
       client <- JdkHttpClient.simple[IO]
 
@@ -85,12 +83,12 @@ object Server extends IOApp {
         case GET -> Root / "health" => Ok()
       }
 
-      _ <- BlazeServerBuilder[IO](ec)
+      _ <- BlazeServerBuilder[IO]
         .bindHttp(8080, "0.0.0.0")
         .withHttpApp((healthRoutes <+> proxyRoutes).orNotFound)
         .resource
 
-      _ <- BlazeServerBuilder[IO](ec)
+      _ <- BlazeServerBuilder[IO]
         .bindHttp(8081, "0.0.0.0")
         .withHttpApp(new UiRoutes(
           cdnCacheMiddleware,
