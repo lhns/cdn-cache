@@ -7,6 +7,7 @@ import japgolly.scalajs.react.internal.CoreGeneral.ReactEventFromInput
 import japgolly.scalajs.react.util.EffectCatsEffect._
 import japgolly.scalajs.react.vdom.VdomElement
 import japgolly.scalajs.react.vdom.html_<^._
+import org.scalajs.dom.html.TableCell
 
 import scala.concurrent.duration._
 
@@ -83,52 +84,58 @@ object MainComponent {
                 })
           }
         ),
-        <.table(^.cls := "table",
-          <.thead(
-            <.tr(
-              <.th(^.scope := "col", "URI"),
-              <.th(^.scope := "col", "Content-Type"),
-              <.th(^.scope := "col", "Content-Length"),
-              <.th(^.scope := "col", ^.width := "0"),
-            )
-          ),
-          <.tbody(
-            <.tr(
-              <.td(
-                ^.colSpan := 4,
-                <.input(
-                  ^.id := "search",
-                  ^.cls := "align-self-center form-control",
-                  ^.tpe := "text",
-                  ^.placeholder := "Search...",
-                  ^.onChange ==> { e: ReactEventFromInput =>
-                    val value = e.target.value
-                    $.modState(_.copy(filter = value))
-                  }
-                )
-              )
-            ), {
-              val filterLowerCase = state.filter.toLowerCase
-              state.entries.getOrElse(Seq.empty).filter(_.uri.toLowerCase.contains(filterLowerCase))
-            }.toVdomArray { entry =>
+        {
+          val headers = Seq[VdomTagOf[TableCell]](
+            <.th(^.scope := "col", "URI"),
+            <.th(^.scope := "col", "Content-Type"),
+            <.th(^.scope := "col", "Content-Encoding"),
+            <.th(^.scope := "col", "Content-Length"),
+            <.th(^.scope := "col", ^.width := "0"),
+          )
+
+          <.table(^.cls := "table",
+            <.thead(
+              <.tr(headers: _*)
+            ),
+            <.tbody(
               <.tr(
-                ^.key := entry.uri,
-                <.th(^.scope := "row", entry.uri),
-                <.td(entry.contentType),
-                <.td(entry.contentLength.map(_ + " B")),
                 <.td(
-                  <.button(^.cls := "btn btn-danger",
-                    <.i(^.cls := "bi bi-trash-fill"),
-                    ^.onClick --> {
-                      Backend.deleteEntry(entry.uri) >>
-                        fetchState
+                  ^.colSpan := headers.size,
+                  <.input(
+                    ^.id := "search",
+                    ^.cls := "align-self-center form-control",
+                    ^.tpe := "text",
+                    ^.placeholder := "Search...",
+                    ^.onChange ==> { e: ReactEventFromInput =>
+                      val value = e.target.value
+                      $.modState(_.copy(filter = value))
                     }
                   )
-                ),
-              )
-            }
+                )
+              ), {
+                val filterLowerCase = state.filter.toLowerCase
+                state.entries.getOrElse(Seq.empty).filter(_.uri.toLowerCase.contains(filterLowerCase))
+              }.toVdomArray { entry =>
+                <.tr(
+                  ^.key := entry.uri,
+                  <.th(^.scope := "row", entry.uri),
+                  <.td(entry.contentType),
+                  <.td(entry.contentEncoding),
+                  <.td(entry.contentLength.map(_ + " B")),
+                  <.td(
+                    <.button(^.cls := "btn btn-danger",
+                      <.i(^.cls := "bi bi-trash-fill"),
+                      ^.onClick --> {
+                        Backend.deleteEntry(entry.uri) >>
+                          fetchState
+                      }
+                    )
+                  ),
+                )
+              }
+            )
           )
-        )
+        }
       )
     }
   }

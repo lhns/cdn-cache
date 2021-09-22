@@ -13,7 +13,7 @@ import io.circe.parser.decode
 import io.circe.syntax._
 import io.circe.{Codec, Decoder, Encoder}
 import org.http4s.dsl.io._
-import org.http4s.headers.{`Content-Length`, `Content-Type`}
+import org.http4s.headers.{`Content-Encoding`, `Content-Length`, `Content-Type`}
 import org.http4s.{Header, HttpRoutes, StaticFile}
 import scodec.bits.ByteVector
 
@@ -30,7 +30,8 @@ class FsCacheMiddleware private(
         CacheEntry(
           uri = metadata.uri.getOrElse("<unknown>"),
           contentType = metadata.contentType.map(Header[`Content-Type`].value),
-          contentLength = metadata.contentLength
+          contentEncoding = metadata.contentEncoding.map(Header[`Content-Encoding`].value),
+          contentLength = metadata.contentLength,
         )
       }
     )
@@ -84,11 +85,15 @@ class FsCacheMiddleware private(
                   val metadata = metadataChunk.toByteVector.decodeUtf8.flatMap(decode[CacheObjectMetadata](_)).toTry.get
                   val dataStream = Stream.fromQueueNoneTerminatedChunk(queue)
                   val metadataSize = metadataChunk.size + 1
+                  val newContentLength = response.contentLength.map[Header.ToRaw](contentLength =>
+                    `Content-Length`(contentLength - metadataSize)
+                  )
                   response
                     .withBodyStream(dataStream)
-                    .putHeaders(response.contentLength.map[Header.ToRaw](contentLength =>
-                      `Content-Length`(contentLength - metadataSize)).toSeq: _*
-                    )
+                    .putHeaders((
+                      newContentLength ++
+                        metadata.contentEncoding.map[Header.ToRaw](e => e)
+                      ).toSeq: _*)
                     .withContentTypeOption(metadata.contentType)
               }
             } yield
@@ -107,7 +112,8 @@ class FsCacheMiddleware private(
                     val metadata = CacheObjectMetadata(
                       uri = uriPath.some,
                       contentType = response.contentType,
-                      contentLength = response.contentLength
+                      contentLength = response.contentLength,
+                      contentEncoding = response.headers.get[`Content-Encoding`],
                     )
 
                     for {
@@ -137,13 +143,14 @@ object FsCacheMiddleware {
   case class CacheObjectMetadata(
                                   uri: Option[String],
                                   contentType: Option[`Content-Type`],
-                                  contentLength: Option[Long]
+                                  contentLength: Option[Long],
+                                  contentEncoding: Option[`Content-Encoding`]
                                 )
 
   object CacheObjectMetadata {
-    implicit val contentTypeCodec: Codec[`Content-Type`] = Codec.from(
-      Decoder[String].emapTry(Header[`Content-Type`].parse(_).toTry),
-      Encoder[String].contramap(Header[`Content-Type`].value)
+    private implicit def headerCodec[A](implicit ev: Header[A, _]): Codec[A] = Codec.from(
+      Decoder[String].emapTry(ev.parse(_).toTry),
+      Encoder[String].contramap(ev.value)
     )
 
     implicit val codec: Codec[CacheObjectMetadata] = deriveCodec

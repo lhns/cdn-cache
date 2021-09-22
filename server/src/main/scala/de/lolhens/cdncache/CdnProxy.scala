@@ -4,6 +4,7 @@ import cats.effect.kernel.Async
 import cats.syntax.functor._
 import de.lolhens.http4s.brotli.BrotliMiddleware
 import de.lolhens.http4s.proxy.Http4sProxy._
+import org.http4s.Uri.Path
 import org.http4s.client.Client
 import org.http4s.{HttpRoutes, Uri}
 
@@ -16,7 +17,13 @@ class CdnProxy[F[_] : Async](
 
     HttpRoutes.of { request =>
       val newRequest = request.withDestination(
-        request.uri.withPath(request.pathInfo).withSchemeAndAuthority(cdnUri)
+        request.uri
+          .withSchemeAndAuthority(cdnUri)
+          .withPath(Path(
+            segments = cdnUri.path.segments ++ request.pathInfo.segments,
+            absolute = true,
+            endsWithSlash = request.pathInfo.endsWithSlash
+          ))
       )
 
       httpApp(newRequest)
