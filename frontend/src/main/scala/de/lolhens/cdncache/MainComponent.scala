@@ -58,7 +58,7 @@ object MainComponent {
             ),
             <.div(^.cls := "flex-fill"),
             <.div(
-              ^.cls := "d-flex flex-column align-items-end mb-2",
+              ^.cls := "d-flex flex-column text-end mb-2",
               <.h4(^.cls := "mb-0", cdn.uri),
               <.div(s"Memory cache ${if (cdn.enableMemCache) "enabled" else "disabled"}")
             )
@@ -69,19 +69,41 @@ object MainComponent {
           state.mode match {
             case None => "Loading..."
             case Some(mode) =>
-              <.button(^.cls := s"btn btn-${if (mode.record) "danger" else "primary"}",
-                if (mode.record) <.div(
-                  "Stop Recording",
-                  <.i(^.cls := "bi bi-stop-fill ms-2")
-                ) else <.div(
-                  "Start Recording",
-                  <.i(^.cls := "bi bi-record-fill ms-2")
+              VdomArray(
+                <.button(
+                  ^.key := "button-passthrough",
+                  ^.cls := s"btn btn-${if (mode.passthrough) "warning" else "primary"} ms-2",
+                  ^.display := "none", // TODO: implement passthrough
+                  if (mode.passthrough) <.div(
+                    "Disable Passthrough",
+                    <.i(^.cls := "bi bi-stop-fill ms-2")
+                  ) else <.div(
+                    "Enable Passthrough",
+                    <.i(^.cls := "bi bi-record-fill ms-2")
+                  ),
+                  ^.onClick --> {
+                    val newMode = mode.copy(passthrough = !mode.passthrough)
+                    $.modStateAsync(_.copy(mode = Some(newMode))) >>
+                      Backend.setMode(newMode)
+                  }
                 ),
-                ^.onClick --> {
-                  val newMode = mode.copy(record = !mode.record)
-                  $.modStateAsync(_.copy(mode = Some(newMode))) >>
-                    Backend.setMode(newMode)
-                })
+                <.button(
+                  ^.key := "button-record",
+                  ^.cls := s"btn btn-${if (mode.record) "danger" else "primary"} ms-2",
+                  if (mode.record) <.div(
+                    "Stop Recording",
+                    <.i(^.cls := "bi bi-stop-fill ms-2")
+                  ) else <.div(
+                    "Start Recording",
+                    <.i(^.cls := "bi bi-record-fill ms-2")
+                  ),
+                  ^.onClick --> {
+                    val newMode = mode.copy(record = !mode.record)
+                    $.modStateAsync(_.copy(mode = Some(newMode))) >>
+                      Backend.setMode(newMode)
+                  }
+                )
+              )
           }
         ),
         {

@@ -56,7 +56,7 @@ object Server extends IOApp {
                                    cachePath: Path,
                                  ): Resource[IO, Unit] =
     for {
-      modeRef <- Resource.eval(Ref[IO].of(Mode(record = false)))
+      modeRef <- Resource.eval(Ref[IO].of(Mode.default))
       client <- JdkHttpClient.simple[IO]
 
       cdnCacheMiddleware = FsCacheMiddleware(cachePath, modeRef)

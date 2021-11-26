@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion := "2.13.6"
+ThisBuild / scalaVersion := "2.13.7"
 ThisBuild / name := (server / name).value
 name := (ThisBuild / name).value
 
@@ -10,7 +10,26 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
   },
 
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+
+  assembly / assemblyJarName := s"${name.value}-${version.value}.sh.bat",
+
+  assembly / assemblyOption := (assembly / assemblyOption).value
+    .withPrependShellScript(Some(AssemblyPlugin.defaultUniversalScript(shebang = false))),
+
+  assembly / assemblyMergeStrategy := {
+    case PathList(paths@_*) if paths.last == "module-info.class" => MergeStrategy.discard
+    case PathList("META-INF", "jpms.args") => MergeStrategy.discard
+    case x =>
+      val oldStrategy = (assembly / assemblyMergeStrategy).value
+      oldStrategy(x)
+  },
 )
+
+val V = new {
+  val circe = "0.14.1"
+  val http4s = "0.23.6"
+  val scalajsReact = "2.0.0"
+}
 
 lazy val root = project.in(file("."))
   .settings(
@@ -18,20 +37,15 @@ lazy val root = project.in(file("."))
   )
   .aggregate(server)
 
-val circeVersion = "0.14.1"
-val doobieVersion = "1.0.0-M5"
-val http4sVersion = "0.23.3"
-val scalajsReactVersion = "2.0.0-RC2"
-
 lazy val common = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
       "de.lolhens" %%% "cats-effect-utils" % "0.2.0",
-      "io.circe" %%% "circe-core" % circeVersion,
-      "io.circe" %%% "circe-generic" % circeVersion,
-      "io.circe" %%% "circe-parser" % circeVersion,
+      "io.circe" %%% "circe-core" % V.circe,
+      "io.circe" %%% "circe-generic" % V.circe,
+      "io.circe" %%% "circe-parser" % V.circe,
       "org.scodec" %%% "scodec-bits" % "1.1.27",
       "org.typelevel" %%% "cats-core" % "2.6.1",
       "org.typelevel" %%% "cats-effect" % "3.2.0",
@@ -47,9 +61,9 @@ lazy val frontend = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "com.github.japgolly.scalajs-react" %%% "core-bundle-cats_effect" % scalajsReactVersion,
-      "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReactVersion,
-      "org.scala-js" %%% "scalajs-dom" % "1.1.0",
+      "com.github.japgolly.scalajs-react" %%% "core-bundle-cats_effect" % V.scalajsReact,
+      "com.github.japgolly.scalajs-react" %%% "extra" % V.scalajsReact,
+      "org.scala-js" %%% "scalajs-dom" % "2.0.0",
     ),
 
     scalaJSLinkerConfig ~= {
@@ -61,7 +75,7 @@ lazy val frontend = project
 lazy val frontendWebjar = frontend.webjar
   .settings(
     webjarAssetReferenceType := Some("http4s"),
-    libraryDependencies += "org.http4s" %% "http4s-server" % http4sVersion,
+    libraryDependencies += "org.http4s" %% "http4s-server" % V.http4s,
   )
 
 lazy val server = project
@@ -72,30 +86,17 @@ lazy val server = project
     name := "cdn-cache",
 
     libraryDependencies ++= Seq(
-      "ch.qos.logback" % "logback-classic" % "1.2.5",
+      "ch.qos.logback" % "logback-classic" % "1.2.7",
       "de.lolhens" %% "fs2-utils" % "0.2.0",
       "de.lolhens" %% "http4s-brotli" % "0.4.0",
       "de.lolhens" %% "http4s-proxy" % "0.4.0",
       "de.lolhens" %% "http4s-spa" % "0.2.0",
-      "org.bidib.com.github.markusbernhardt" % "proxy-vole" % "1.0.15",
-      "org.http4s" %% "http4s-blaze-server" % http4sVersion,
-      "org.http4s" %% "http4s-circe" % http4sVersion,
-      "org.http4s" %% "http4s-dsl" % http4sVersion,
-      "org.http4s" %% "http4s-scalatags" % http4sVersion,
-      "org.http4s" %% "http4s-client" % http4sVersion,
+      "org.bidib.com.github.markusbernhardt" % "proxy-vole" % "1.0.16",
+      "org.http4s" %% "http4s-blaze-server" % V.http4s,
+      "org.http4s" %% "http4s-circe" % V.http4s,
+      "org.http4s" %% "http4s-dsl" % V.http4s,
+      "org.http4s" %% "http4s-scalatags" % V.http4s,
+      "org.http4s" %% "http4s-client" % V.http4s,
       "org.http4s" %% "http4s-jdk-http-client" % "0.5.0",
-    ),
-
-    assembly / assemblyJarName := s"${name.value}-${version.value}.sh.bat",
-
-    assembly / assemblyOption := (assembly / assemblyOption).value
-      .withPrependShellScript(Some(AssemblyPlugin.defaultUniversalScript(shebang = false))),
-
-    assembly / assemblyMergeStrategy := {
-      case PathList(paths@_*) if paths.last == "module-info.class" => MergeStrategy.discard
-      case PathList("META-INF", "jpms.args") => MergeStrategy.discard
-      case x =>
-        val oldStrategy = (assembly / assemblyMergeStrategy).value
-        oldStrategy(x)
-    },
+    )
   )
