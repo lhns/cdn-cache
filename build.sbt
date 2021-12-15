@@ -27,7 +27,7 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
 
 val V = new {
   val circe = "0.14.1"
-  val http4s = "0.23.6"
+  val http4s = "0.23.7"
   val scalajsReact = "2.0.0"
 }
 
@@ -86,11 +86,11 @@ lazy val server = project
     name := "cdn-cache",
 
     libraryDependencies ++= Seq(
-      "ch.qos.logback" % "logback-classic" % "1.2.7",
+      "ch.qos.logback" % "logback-classic" % "1.2.8",
       "de.lolhens" %% "fs2-utils" % "0.2.0",
       "de.lolhens" %% "http4s-brotli" % "0.4.0",
       "de.lolhens" %% "http4s-proxy" % "0.4.0",
-      "de.lolhens" %% "http4s-spa" % "0.2.0",
+      "de.lolhens" %% "http4s-spa" % "0.2.1",
       "org.bidib.com.github.markusbernhardt" % "proxy-vole" % "1.0.16",
       "org.http4s" %% "http4s-blaze-server" % V.http4s,
       "org.http4s" %% "http4s-circe" % V.http4s,
