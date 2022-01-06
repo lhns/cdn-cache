@@ -12,6 +12,7 @@ import org.http4s.dsl.io._
 import org.http4s.implicits._
 import org.http4s.jdkhttpclient.JdkHttpClient
 import org.http4s.server.Router
+import org.http4s.server.middleware.GZip
 import org.log4s.getLogger
 
 import java.net.ProxySelector
@@ -77,7 +78,7 @@ object Server extends IOApp {
 
             routeUri.renderString -> routes
         }.toSeq: _*
-      )
+      ).pipe(GZip(_))
 
       healthRoutes = HttpRoutes.of[IO] {
         case GET -> Root / "health" => Ok()

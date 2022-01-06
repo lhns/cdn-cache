@@ -8,6 +8,7 @@ import io.circe.Json
 import io.circe.syntax._
 import org.http4s.circe._
 import org.http4s.server.Router
+import org.http4s.server.middleware.GZip
 import org.http4s.server.staticcontent.ResourceServiceBuilder
 import org.http4s.{HttpRoutes, Uri}
 
@@ -67,6 +68,6 @@ class UiRoutes(
             response <- Ok(entries.asJson)
           } yield response
       },
-    )
+    ).pipe(GZip(_))
   }
 }
