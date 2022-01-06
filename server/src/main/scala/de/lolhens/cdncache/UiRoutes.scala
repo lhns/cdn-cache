@@ -12,6 +12,8 @@ import org.http4s.server.middleware.GZip
 import org.http4s.server.staticcontent.ResourceServiceBuilder
 import org.http4s.{HttpRoutes, Uri}
 
+import scala.util.chaining._
+
 class UiRoutes(
                 cache: FsCacheMiddleware,
                 appConfig: AppConfig,
@@ -41,7 +43,7 @@ class UiRoutes(
     Router(
       "/" -> appController.toRoutes,
 
-      "/api" -> HttpRoutes.of {
+      "/api" -> HttpRoutes.of[IO] {
         case GET -> Root / "mode" =>
           for {
             mode <- cache.modeRef.get
