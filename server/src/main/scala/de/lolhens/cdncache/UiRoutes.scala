@@ -38,18 +38,10 @@ class UiRoutes(
   )
 
   private val apiRoutes: HttpRoutes[IO] = Rest.toRoutes(
-    Api.getMode.impl { _ =>
-      cache.modeRef.get
-    },
-    Api.setMode.impl { mode =>
-      cache.modeRef.set(mode)
-    },
-    Api.deleteEntry.impl { uriPath =>
-      cache.deleteEntry(uriPath)
-    },
-    Api.listEntries.impl { _ =>
-      cache.listEntries.compile.toList
-    },
+    Api.getMode.impl(_ => cache.modeRef.get),
+    Api.setMode.impl(cache.modeRef.set),
+    Api.deleteEntry.impl(cache.deleteEntry),
+    Api.listEntries.impl(_ => cache.listEntries.compile.toList),
   )
 
   val toRoutes: HttpRoutes[IO] = {
