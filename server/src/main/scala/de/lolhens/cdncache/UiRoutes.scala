@@ -4,9 +4,8 @@ import cats.data.Kleisli
 import cats.effect.IO
 import cats.syntax.option._
 import de.lolhens.http4s.spa._
-import io.circe.Json
+import de.lolhens.remoteio.Rest
 import io.circe.syntax._
-import org.http4s.circe._
 import org.http4s.server.Router
 import org.http4s.server.middleware.GZip
 import org.http4s.server.staticcontent.ResourceServiceBuilder
@@ -38,38 +37,25 @@ class UiRoutes(
     resourceServiceBuilder = ResourceServiceBuilder[IO]("/assets").some
   )
 
+  private val apiRoutes: HttpRoutes[IO] = Rest.toRoutes(
+    Api.getMode.impl { _ =>
+      cache.modeRef.get
+    },
+    Api.setMode.impl { mode =>
+      cache.modeRef.set(mode)
+    },
+    Api.deleteEntry.impl { uriPath =>
+      cache.deleteEntry(uriPath)
+    },
+    Api.listEntries.impl { _ =>
+      cache.listEntries.compile.toList
+    },
+  )
+
   val toRoutes: HttpRoutes[IO] = {
-    import org.http4s.dsl.io._
     Router(
       "/" -> appController.toRoutes,
-
-      "/api" -> HttpRoutes.of[IO] {
-        case GET -> Root / "mode" =>
-          for {
-            mode <- cache.modeRef.get
-            response <- Ok(mode.asJson)
-          } yield response
-
-        case request@POST -> Root / "mode" =>
-          for {
-            mode <- request.as[Json].map(_.as[Mode].toTry.get)
-            _ <- cache.modeRef.set(mode)
-            response <- Ok()
-          } yield response
-
-        case request@POST -> Root / "cache" / "entries" / "delete" =>
-          for {
-            uriPath <- request.as[Json].map(_.as[String].toTry.get)
-            _ <- cache.deleteEntry(uriPath)
-            response <- Ok()
-          } yield response
-
-        case GET -> Root / "cache" / "entries" =>
-          for {
-            entries <- cache.listEntries.compile.toList
-            response <- Ok(entries.asJson)
-          } yield response
-      },
+      "/api" -> apiRoutes,
     ).pipe(GZip(_))
   }
 }

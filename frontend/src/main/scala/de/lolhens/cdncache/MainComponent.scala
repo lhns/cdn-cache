@@ -27,8 +27,8 @@ object MainComponent {
   class Backend($: BackendScope[Props, State]) {
     private def fetchState: IO[Unit] =
       for {
-        modeFiber <- Backend.mode.start
-        entriesFiber <- Backend.cacheEntries.start
+        modeFiber <- Api.getMode(()).start
+        entriesFiber <- Api.listEntries(()).start
         mode <- modeFiber.joinWithNever
         _ <- $.modStateAsync(_.copy(mode = Some(mode)))
         entries <- entriesFiber.joinWithNever
@@ -48,7 +48,7 @@ object MainComponent {
 
       <.div(
         ^.cls := "container my-4 d-flex flex-column",
-        Backend.appConfig.cdns.sortBy(_.routeUri).toVdomArray(cdn =>
+        appConfig.cdns.sortBy(_.routeUri).toVdomArray(cdn =>
           <.div(
             ^.key := cdn.routeUri,
             ^.cls := "d-flex flex-row",
@@ -84,7 +84,7 @@ object MainComponent {
                   ^.onClick --> {
                     val newMode = mode.copy(passthrough = !mode.passthrough)
                     $.modStateAsync(_.copy(mode = Some(newMode))) >>
-                      Backend.setMode(newMode)
+                      Api.setMode(newMode)
                   }
                 ),
                 <.button(
@@ -100,7 +100,7 @@ object MainComponent {
                   ^.onClick --> {
                     val newMode = mode.copy(record = !mode.record)
                     $.modStateAsync(_.copy(mode = Some(newMode))) >>
-                      Backend.setMode(newMode)
+                      Api.setMode(newMode)
                   }
                 )
               )
@@ -148,7 +148,7 @@ object MainComponent {
                     <.button(^.cls := "btn btn-danger",
                       <.i(^.cls := "bi bi-trash-fill"),
                       ^.onClick --> {
-                        Backend.deleteEntry(entry.uri) >>
+                        Api.deleteEntry(entry.uri) >>
                           fetchState
                       }
                     )

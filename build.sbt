@@ -43,9 +43,12 @@ lazy val common = crossProject(JVMPlatform, JSPlatform)
   .settings(
     libraryDependencies ++= Seq(
       "de.lolhens" %%% "cats-effect-utils" % "0.2.0",
+      "de.lolhens" %%% "remote-io-http4s" % "0.0.1",
       "io.circe" %%% "circe-core" % V.circe,
       "io.circe" %%% "circe-generic" % V.circe,
       "io.circe" %%% "circe-parser" % V.circe,
+      "org.http4s" %%% "http4s-circe" % V.http4s,
+      "org.http4s" %%% "http4s-client" % V.http4s,
       "org.scodec" %%% "scodec-bits" % "1.1.27",
       "org.typelevel" %%% "cats-core" % "2.6.1",
       "org.typelevel" %%% "cats-effect" % "3.2.0",
@@ -63,7 +66,8 @@ lazy val frontend = project
     libraryDependencies ++= Seq(
       "com.github.japgolly.scalajs-react" %%% "core-bundle-cats_effect" % V.scalajsReact,
       "com.github.japgolly.scalajs-react" %%% "extra" % V.scalajsReact,
-      "org.scala-js" %%% "scalajs-dom" % "2.0.0",
+      "org.scala-js" %%% "scalajs-dom" % "2.1.0",
+      "org.http4s" %%% "http4s-dom" % "0.2.0"
     ),
 
     scalaJSLinkerConfig ~= {
@@ -86,17 +90,15 @@ lazy val server = project
     name := "cdn-cache",
 
     libraryDependencies ++= Seq(
-      "ch.qos.logback" % "logback-classic" % "1.2.8",
+      "ch.qos.logback" % "logback-classic" % "1.2.10",
       "de.lolhens" %% "fs2-utils" % "0.2.0",
       "de.lolhens" %% "http4s-brotli" % "0.4.0",
       "de.lolhens" %% "http4s-proxy" % "0.4.0",
       "de.lolhens" %% "http4s-spa" % "0.2.1",
       "org.bidib.com.github.markusbernhardt" % "proxy-vole" % "1.0.16",
       "org.http4s" %% "http4s-blaze-server" % V.http4s,
-      "org.http4s" %% "http4s-circe" % V.http4s,
       "org.http4s" %% "http4s-dsl" % V.http4s,
       "org.http4s" %% "http4s-scalatags" % V.http4s,
-      "org.http4s" %% "http4s-client" % V.http4s,
       "org.http4s" %% "http4s-jdk-http-client" % "0.5.0",
     )
   )
