@@ -12,7 +12,7 @@ import org.http4s.dsl.io._
 import org.http4s.implicits._
 import org.http4s.jdkhttpclient.JdkHttpClient
 import org.http4s.server.Router
-import org.http4s.server.middleware.GZip
+import org.http4s.server.middleware.{CORS, GZip}
 import org.log4s.getLogger
 
 import java.net.ProxySelector
@@ -75,6 +75,7 @@ object Server extends IOApp {
                   if (settings.memCacheOrDefault) memCacheMiddleware(routes)
                   else routes
                 )
+                .pipe(CORS.policy(_))
 
             routeUri.renderString -> routes
         }.toSeq: _*
