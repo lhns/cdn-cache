@@ -99,6 +99,6 @@ lazy val server = project
       "org.http4s" %% "http4s-blaze-server" % V.http4s,
       "org.http4s" %% "http4s-dsl" % V.http4s,
       "org.http4s" %% "http4s-scalatags" % V.http4s,
-      "org.http4s" %% "http4s-jdk-http-client" % "0.5.0",
+      "org.http4s" %% "http4s-jdk-http-client" % "0.7.0",
     )
   )
