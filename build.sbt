@@ -95,7 +95,7 @@ lazy val server = project
       "de.lolhens" %% "http4s-brotli" % "0.4.0",
       "de.lolhens" %% "http4s-proxy" % "0.4.0",
       "de.lolhens" %% "http4s-spa" % "0.2.1",
-      "org.bidib.com.github.markusbernhardt" % "proxy-vole" % "1.0.16",
+      "org.bidib.com.github.markusbernhardt" % "proxy-vole" % "1.0.17",
       "org.http4s" %% "http4s-blaze-server" % V.http4s,
       "org.http4s" %% "http4s-dsl" % V.http4s,
       "org.http4s" %% "http4s-scalatags" % V.http4s,
