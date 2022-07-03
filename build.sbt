@@ -90,7 +90,7 @@ lazy val server = project
     name := "cdn-cache",
 
     libraryDependencies ++= Seq(
-      "ch.qos.logback" % "logback-classic" % "1.2.10",
+      "ch.qos.logback" % "logback-classic" % "1.2.11",
       "de.lolhens" %% "fs2-utils" % "0.2.0",
       "de.lolhens" %% "http4s-brotli" % "0.4.0",
       "de.lolhens" %% "http4s-proxy" % "0.4.0",
