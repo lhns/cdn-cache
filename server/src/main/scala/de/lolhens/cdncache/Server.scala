@@ -2,13 +2,14 @@ package de.lolhens.cdncache
 
 import cats.effect._
 import cats.syntax.semigroupk._
+import com.comcast.ip4s._
 import com.github.markusbernhardt.proxy.ProxySearch
 import de.lolhens.cdncache.AppConfig.CdnConfig
 import io.circe.parser.{decode => decodeJson}
 import io.circe.syntax._
 import org.http4s.HttpRoutes
-import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.dsl.io._
+import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.implicits._
 import org.http4s.jdkhttpclient.JdkHttpClient
 import org.http4s.server.Router
@@ -85,13 +86,15 @@ object Server extends IOApp {
         case GET -> Root / "health" => Ok()
       }
 
-      _ <- BlazeServerBuilder[IO]
-        .bindHttp(8080, "0.0.0.0")
+      _ <- EmberServerBuilder.default[IO]
+        .withHost(host"0.0.0.0")
+        .withPort(port"8080")
         .withHttpApp((healthRoutes <+> proxyRoutes).orNotFound)
-        .resource
+        .build
 
-      _ <- BlazeServerBuilder[IO]
-        .bindHttp(8081, "0.0.0.0")
+      _ <- EmberServerBuilder.default[IO]
+        .withHost(host"0.0.0.0")
+        .withPort(port"8081")
         .withHttpApp(new UiRoutes(
           cdnCacheMiddleware,
           appConfig = AppConfig(
@@ -105,6 +108,6 @@ object Server extends IOApp {
             }.toSeq
           )
         ).toRoutes.orNotFound)
-        .resource
+        .build
     } yield ()
 }
