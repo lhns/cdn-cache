@@ -1,4 +1,4 @@
-package de.lolhens
+package de.lhns
 
 import _root_.cats.effect.IO
 import de.lolhens.remoteio.Rest.RestClientImpl

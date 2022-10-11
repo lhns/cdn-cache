@@ -1,4 +1,4 @@
-package de.lolhens.cdncache
+package de.lhns.cdncache
 
 import cats.effect.IO
 import japgolly.scalajs.react.ScalaComponent

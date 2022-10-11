@@ -1,10 +1,10 @@
-package de.lolhens.cdncache
+package de.lhns.cdncache
 
 import cats.data.OptionT
 import cats.effect.std.Queue
 import cats.effect.{IO, Ref}
 import cats.syntax.option._
-import de.lolhens.cdncache.FsCacheMiddleware.CacheObjectMetadata
+import de.lhns.cdncache.FsCacheMiddleware.CacheObjectMetadata
 import de.lolhens.fs2.utils.Fs2Utils._
 import fs2.io.file.{Files, Path => Fs2Path}
 import fs2.{Chunk, Pull, Stream}

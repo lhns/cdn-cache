@@ -1,4 +1,4 @@
-package de.lolhens.cdncache
+package de.lhns.cdncache
 
 import cats.data.Kleisli
 import cats.effect.IO

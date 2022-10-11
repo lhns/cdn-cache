@@ -1,6 +1,6 @@
-package de.lolhens.cdncache
+package de.lhns.cdncache
 
-import de.lolhens.cdncache.AppConfig.CdnConfig
+import de.lhns.cdncache.AppConfig.CdnConfig
 import io.circe.Codec
 import io.circe.generic.semiauto._
 

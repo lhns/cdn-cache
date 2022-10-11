@@ -1,4 +1,4 @@
-package de.lolhens.cdncache
+package de.lhns.cdncache
 
 import cats.data.OptionT
 import cats.effect.{Concurrent, IO}

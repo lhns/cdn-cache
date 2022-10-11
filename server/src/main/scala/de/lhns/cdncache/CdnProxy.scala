@@ -1,4 +1,4 @@
-package de.lolhens.cdncache
+package de.lhns.cdncache
 
 import cats.effect.kernel.Async
 import cats.syntax.functor._

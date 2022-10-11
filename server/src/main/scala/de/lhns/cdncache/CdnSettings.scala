@@ -1,4 +1,4 @@
-package de.lolhens.cdncache
+package de.lhns.cdncache
 
 import de.lolhens.http4s.spa._
 import io.circe.generic.semiauto._

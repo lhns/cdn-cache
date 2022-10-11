@@ -1,19 +1,18 @@
-package de.lolhens.cdncache
+package de.lhns.cdncache
 
 import cats.effect._
 import cats.syntax.semigroupk._
 import com.comcast.ip4s._
 import com.github.markusbernhardt.proxy.ProxySearch
-import de.lolhens.cdncache.AppConfig.CdnConfig
-import io.circe.parser.{decode => decodeJson}
+import de.lhns.cdncache.AppConfig.CdnConfig
 import io.circe.syntax._
-import org.http4s.HttpRoutes
 import org.http4s.dsl.io._
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.implicits._
 import org.http4s.jdkhttpclient.JdkHttpClient
-import org.http4s.server.Router
-import org.http4s.server.middleware.{CORS, GZip}
+import org.http4s.server.middleware.{CORS, ErrorAction, GZip}
+import org.http4s.server.{Router, Server}
+import org.http4s.{HttpApp, HttpRoutes}
 import org.log4s.getLogger
 
 import java.net.ProxySelector
@@ -32,15 +31,16 @@ object Server extends IOApp {
         .getOrElse(ProxySelector.getDefault)
     )
 
-    val cdnSettings: Map[String, CdnSettings] = decodeJson[Map[String, CdnSettings]](
-      Option(System.getenv("CDN_SETTINGS"))
-        .getOrElse(throw new IllegalArgumentException("Missing variable: CDN_SETTINGS"))
-    ).toTry.get
 
-    val cachePath = Paths.get(
-      Option(System.getenv("CACHE_PATH"))
-        .getOrElse(throw new IllegalArgumentException("Missing variable: CACHE_PATH"))
-    )
+    val cdnSettings: Map[String, CdnSettings] = Option(System.getenv("CDN_SETTINGS"))
+      .toRight(new IllegalArgumentException("Missing variable: CDN_SETTINGS"))
+      .flatMap(io.circe.parser.decode[Map[String, CdnSettings]](_))
+      .toTry.get
+
+    val cachePath = Option(System.getenv("CACHE_PATH"))
+      .toRight(new IllegalArgumentException("Missing variable: CACHE_PATH"))
+      .map(Paths.get(_))
+      .toTry.get
 
     logger.info(s"CDN_SETTINGS: ${cdnSettings.asJson.spaces2}")
     logger.info(s"CACHE_PATH: $cachePath")
@@ -86,16 +86,16 @@ object Server extends IOApp {
         case GET -> Root / "health" => Ok()
       }
 
-      _ <- EmberServerBuilder.default[IO]
-        .withHost(host"0.0.0.0")
-        .withPort(port"8080")
-        .withHttpApp((healthRoutes <+> proxyRoutes).orNotFound)
-        .build
+      _ <- serverResource(
+        host"0.0.0.0",
+        port"8080",
+        (healthRoutes <+> proxyRoutes).orNotFound
+      )
 
-      _ <- EmberServerBuilder.default[IO]
-        .withHost(host"0.0.0.0")
-        .withPort(port"8081")
-        .withHttpApp(new UiRoutes(
+      _ <- serverResource(
+        host"0.0.0.0",
+        port"8081",
+        new UiRoutes(
           cdnCacheMiddleware,
           appConfig = AppConfig(
             cdnSettings.iterator.map {
@@ -107,7 +107,19 @@ object Server extends IOApp {
                 )
             }.toSeq
           )
-        ).toRoutes.orNotFound)
-        .build
+        ).toRoutes.orNotFound
+      )
     } yield ()
+
+  def serverResource(host: Host, port: Port, http: HttpApp[IO]): Resource[IO, Server] =
+    EmberServerBuilder.default[IO]
+      .withHost(host)
+      .withPort(port)
+      .withHttpApp(
+        ErrorAction.log(
+          http = http,
+          messageFailureLogAction = (t, msg) => IO(logger.debug(t)(msg)),
+          serviceErrorLogAction = (t, msg) => IO(logger.error(t)(msg))
+        ))
+      .build
 }
