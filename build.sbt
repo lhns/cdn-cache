@@ -25,21 +25,16 @@ val V = new {
 
 lazy val commonSettings: Seq[Setting[_]] = Seq(
   version := {
-    val Tag = "refs/tags/(.*)".r
+    val Tag = "refs/tags/v?([0-9]+(?:\\.[0-9]+)+(?:[+-].*)?)".r
     sys.env.get("CI_VERSION").collect { case Tag(tag) => tag }
       .getOrElse("0.0.1-SNAPSHOT")
   },
-
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
-
   assembly / assemblyJarName := s"${name.value}-${version.value}.sh.bat",
-
   assembly / assemblyOption := (assembly / assemblyOption).value
     .withPrependShellScript(Some(AssemblyPlugin.defaultUniversalScript(shebang = false))),
-
   assembly / assemblyMergeStrategy := {
     case PathList(paths@_*) if paths.last == "module-info.class" => MergeStrategy.discard
-    case PathList("META-INF", "jpms.args") => MergeStrategy.discard
     case x =>
       val oldStrategy = (assembly / assemblyMergeStrategy).value
       oldStrategy(x)

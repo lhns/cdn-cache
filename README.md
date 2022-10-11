@@ -1,6 +1,6 @@
 # cdn-cache
 
-## Example Config
+## Example Configuration
 
 #### CDN_SETTINGS
 
