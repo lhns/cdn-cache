@@ -87,14 +87,12 @@ object Server extends IOApp {
       }
 
       _ <- serverResource(
-        host"0.0.0.0",
-        port"8080",
+        SocketAddress(host"0.0.0.0", port"8080"),
         (healthRoutes <+> proxyRoutes).orNotFound
       )
 
       _ <- serverResource(
-        host"0.0.0.0",
-        port"8081",
+        SocketAddress(host"0.0.0.0", port"8081"),
         new UiRoutes(
           cdnCacheMiddleware,
           appConfig = AppConfig(
@@ -111,15 +109,14 @@ object Server extends IOApp {
       )
     } yield ()
 
-  def serverResource(host: Host, port: Port, http: HttpApp[IO]): Resource[IO, Server] =
+  def serverResource(socketAddress: SocketAddress[Host], http: HttpApp[IO]): Resource[IO, Server] =
     EmberServerBuilder.default[IO]
-      .withHost(host)
-      .withPort(port)
-      .withHttpApp(
-        ErrorAction.log(
-          http = http,
-          messageFailureLogAction = (t, msg) => IO(logger.debug(t)(msg)),
-          serviceErrorLogAction = (t, msg) => IO(logger.error(t)(msg))
-        ))
+      .withHost(socketAddress.host)
+      .withPort(socketAddress.port)
+      .withHttpApp(ErrorAction.log(
+        http = http,
+        messageFailureLogAction = (t, msg) => IO(logger.debug(t)(msg)),
+        serviceErrorLogAction = (t, msg) => IO(logger.error(t)(msg))
+      ))
       .build
 }
