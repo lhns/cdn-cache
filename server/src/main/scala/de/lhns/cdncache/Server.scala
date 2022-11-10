@@ -17,6 +17,7 @@ import org.log4s.getLogger
 
 import java.net.ProxySelector
 import java.nio.file.{Files, Path, Paths}
+import scala.concurrent.duration._
 import scala.util.chaining._
 
 object Server extends IOApp {
@@ -76,7 +77,7 @@ object Server extends IOApp {
                   if (settings.memCacheOrDefault) memCacheMiddleware(routes)
                   else routes
                 )
-                .pipe(CORS.policy(_))
+                .pipe(CORS.policy.withMaxAge(2.hours)(_))
 
             routeUri.renderString -> routes
         }.toSeq: _*
@@ -118,5 +119,6 @@ object Server extends IOApp {
         messageFailureLogAction = (t, msg) => IO(logger.debug(t)(msg)),
         serviceErrorLogAction = (t, msg) => IO(logger.error(t)(msg))
       ))
+      .withShutdownTimeout(1.second)
       .build
 }
