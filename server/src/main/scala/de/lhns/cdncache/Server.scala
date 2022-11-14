@@ -32,7 +32,6 @@ object Server extends IOApp {
         .getOrElse(ProxySelector.getDefault)
     )
 
-
     val cdnSettings: Map[String, CdnSettings] = Option(System.getenv("CDN_SETTINGS"))
       .toRight(new IllegalArgumentException("Missing variable: CDN_SETTINGS"))
       .flatMap(io.circe.parser.decode[Map[String, CdnSettings]](_))
@@ -110,14 +109,14 @@ object Server extends IOApp {
       )
     } yield ()
 
-  def serverResource(socketAddress: SocketAddress[Host], http: HttpApp[IO]): Resource[IO, Server] =
-    EmberServerBuilder.default[IO]
+  def serverResource[F[_] : Async](socketAddress: SocketAddress[Host], http: HttpApp[F]): Resource[F, Server] =
+    EmberServerBuilder.default[F]
       .withHost(socketAddress.host)
       .withPort(socketAddress.port)
       .withHttpApp(ErrorAction.log(
         http = http,
-        messageFailureLogAction = (t, msg) => IO(logger.debug(t)(msg)),
-        serviceErrorLogAction = (t, msg) => IO(logger.error(t)(msg))
+        messageFailureLogAction = (t, msg) => Async[F].delay(logger.debug(t)(msg)),
+        serviceErrorLogAction = (t, msg) => Async[F].delay(logger.error(t)(msg))
       ))
       .withShutdownTimeout(1.second)
       .build

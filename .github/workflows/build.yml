@@ -35,7 +35,7 @@ jobs:
       - name: SBT Build
         env:
           CI_VERSION: ${{ github.ref }}
-        run: sbt "; test; assembly"
+        run: sbt "; test; server/assembly"
 
       - name: Docker Build
         run: docker build -t "$IMAGE_NAME" --label "runnumber=${GITHUB_RUN_ID}" .
