@@ -18,7 +18,7 @@ val V = new {
   val logbackClassic = "1.4.4"
   val proxyVole = "1.0.17"
   val remoteIo = "0.0.1"
-  val scalajsDom = "2.1.0"
+  val scalajsDom = "2.3.0"
   val scalajsReact = "2.0.0"
   val scodecBits = "1.1.27"
 }
