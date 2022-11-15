@@ -3,8 +3,9 @@ ThisBuild / name := (server / name).value
 name := (ThisBuild / name).value
 
 val V = new {
+  val betterMonadicFor = "0.3.1"
   val cats = "2.6.1"
-  val catsEffect = "3.2.0"
+  val catsEffect = "3.4.0"
   val catsEffectUtils = "0.2.0"
   val circe = "0.14.1"
   val fs2Utils = "0.3.0"
@@ -13,8 +14,7 @@ val V = new {
   val http4sDom = "0.2.0"
   val http4sJdkHttpClient = "0.7.0"
   val http4sProxy = "0.4.0"
-  val http4sScalatags = "0.24.0"
-  val http4sSpa = "0.4.0"
+  val http4sSpa = "0.6.0"
   val logbackClassic = "1.4.4"
   val proxyVole = "1.0.17"
   val remoteIo = "0.0.1"
@@ -29,7 +29,7 @@ lazy val commonSettings: Seq[Setting[_]] = Seq(
     sys.env.get("CI_VERSION").collect { case Tag(tag) => tag }
       .getOrElse("0.0.1-SNAPSHOT")
   },
-  addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+  addCompilerPlugin("com.olegpy" %% "better-monadic-for" % V.betterMonadicFor),
   assembly / assemblyJarName := s"${name.value}-${version.value}.sh.bat",
   assembly / assemblyOption := (assembly / assemblyOption).value
     .withPrependShellScript(Some(AssemblyPlugin.defaultUniversalScript(shebang = false))),
@@ -45,9 +45,9 @@ lazy val root = project.in(file("."))
   .settings(
     publishArtifact := false
   )
-  .aggregate(server)
+  .aggregate(server, sharedJvm, sharedJs, frontend)
 
-lazy val common = crossProject(JVMPlatform, JSPlatform)
+lazy val shared = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .settings(commonSettings)
   .settings(
@@ -65,12 +65,14 @@ lazy val common = crossProject(JVMPlatform, JSPlatform)
     )
   )
 
-lazy val commonJvm = common.jvm
-lazy val commonJs = common.js
+lazy val sharedJvm = shared.jvm
+lazy val sharedJs = shared.js
+
+import org.scalajs.linker.interface.OutputPatterns
 
 lazy val frontend = project
   .enablePlugins(ScalaJSWebjarPlugin)
-  .dependsOn(commonJs)
+  .dependsOn(sharedJs)
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
@@ -82,6 +84,7 @@ lazy val frontend = project
 
     scalaJSLinkerConfig ~= {
       _.withModuleKind(ModuleKind.ESModule)
+        .withOutputPatterns(OutputPatterns.fromJSFile("%s.mjs"))
     },
     scalaJSUseMainModuleInitializer := true,
   )
@@ -94,7 +97,7 @@ lazy val frontendWebjar = frontend.webjar
 
 lazy val server = project
   .enablePlugins(BuildInfoPlugin)
-  .dependsOn(commonJvm, frontendWebjar)
+  .dependsOn(sharedJvm, frontendWebjar)
   .settings(commonSettings)
   .settings(
     name := "cdn-cache",
@@ -104,11 +107,10 @@ lazy val server = project
       "de.lolhens" %% "fs2-utils" % V.fs2Utils,
       "de.lolhens" %% "http4s-brotli" % V.http4sBrotli,
       "de.lolhens" %% "http4s-proxy" % V.http4sProxy,
-      "de.lolhens" %% "http4s-spa" % V.http4sSpa,
+      "de.lhns" %% "http4s-spa" % V.http4sSpa,
       "org.bidib.com.github.markusbernhardt" % "proxy-vole" % V.proxyVole,
       "org.http4s" %% "http4s-ember-server" % V.http4s,
       "org.http4s" %% "http4s-dsl" % V.http4s,
-      "org.http4s" %% "http4s-scalatags" % V.http4sScalatags,
       "org.http4s" %% "http4s-jdk-http-client" % V.http4sJdkHttpClient,
     )
   )
