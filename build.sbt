@@ -19,7 +19,7 @@ val V = new {
   val proxyVole = "1.0.17"
   val remoteIo = "0.0.1"
   val scalajsDom = "2.1.0"
-  val scalajsReact = "2.0.0"
+  val scalajsReact = "2.0.1"
   val scodecBits = "1.1.27"
 }
 
