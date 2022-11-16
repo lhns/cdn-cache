@@ -4,23 +4,23 @@ name := (ThisBuild / name).value
 
 val V = new {
   val betterMonadicFor = "0.3.1"
-  val cats = "2.6.1"
+  val cats = "2.9.0"
   val catsEffect = "3.4.0"
   val catsEffectUtils = "0.2.0"
-  val circe = "0.14.1"
+  val circe = "0.14.3"
   val fs2Utils = "0.3.0"
   val http4s = "0.23.16"
   val http4sBrotli = "0.4.0"
-  val http4sDom = "0.2.0"
+  val http4sDom = "0.2.3"
   val http4sJdkHttpClient = "0.7.0"
   val http4sProxy = "0.4.0"
-  val http4sSpa = "0.6.0"
+  val http4sSpa = "0.6.1"
   val logbackClassic = "1.4.4"
   val proxyVole = "1.0.17"
   val remoteIo = "0.0.1"
-  val scalajsDom = "2.1.0"
+  val scalajsDom = "2.3.0"
   val scalajsReact = "2.0.0"
-  val scodecBits = "1.1.27"
+  val scodecBits = "1.1.34"
 }
 
 lazy val commonSettings: Seq[Setting[_]] = Seq(
