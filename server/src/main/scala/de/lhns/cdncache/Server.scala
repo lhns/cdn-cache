@@ -17,6 +17,7 @@ import org.log4s.getLogger
 
 import java.net.ProxySelector
 import java.nio.file.{Files, Path, Paths}
+import scala.concurrent.duration._
 import scala.util.chaining._
 
 object Server extends IOApp {
@@ -30,7 +31,6 @@ object Server extends IOApp {
       }.getProxySelector)
         .getOrElse(ProxySelector.getDefault)
     )
-
 
     val cdnSettings: Map[String, CdnSettings] = Option(System.getenv("CDN_SETTINGS"))
       .toRight(new IllegalArgumentException("Missing variable: CDN_SETTINGS"))
@@ -76,7 +76,7 @@ object Server extends IOApp {
                   if (settings.memCacheOrDefault) memCacheMiddleware(routes)
                   else routes
                 )
-                .pipe(CORS.policy(_))
+                .pipe(CORS.policy.withMaxAge(2.hours)(_))
 
             routeUri.renderString -> routes
         }.toSeq: _*
@@ -87,14 +87,12 @@ object Server extends IOApp {
       }
 
       _ <- serverResource(
-        host"0.0.0.0",
-        port"8080",
+        SocketAddress(host"0.0.0.0", port"8080"),
         (healthRoutes <+> proxyRoutes).orNotFound
       )
 
       _ <- serverResource(
-        host"0.0.0.0",
-        port"8081",
+        SocketAddress(host"0.0.0.0", port"8081"),
         new UiRoutes(
           cdnCacheMiddleware,
           appConfig = AppConfig(
@@ -111,15 +109,15 @@ object Server extends IOApp {
       )
     } yield ()
 
-  def serverResource(host: Host, port: Port, http: HttpApp[IO]): Resource[IO, Server] =
-    EmberServerBuilder.default[IO]
-      .withHost(host)
-      .withPort(port)
-      .withHttpApp(
-        ErrorAction.log(
-          http = http,
-          messageFailureLogAction = (t, msg) => IO(logger.debug(t)(msg)),
-          serviceErrorLogAction = (t, msg) => IO(logger.error(t)(msg))
-        ))
+  def serverResource[F[_] : Async](socketAddress: SocketAddress[Host], http: HttpApp[F]): Resource[F, Server] =
+    EmberServerBuilder.default[F]
+      .withHost(socketAddress.host)
+      .withPort(socketAddress.port)
+      .withHttpApp(ErrorAction.log(
+        http = http,
+        messageFailureLogAction = (t, msg) => Async[F].delay(logger.debug(t)(msg)),
+        serviceErrorLogAction = (t, msg) => Async[F].delay(logger.error(t)(msg))
+      ))
+      .withShutdownTimeout(1.second)
       .build
 }
