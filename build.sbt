@@ -106,7 +106,7 @@ lazy val server = project
       "ch.qos.logback" % "logback-classic" % V.logbackClassic,
       "de.lolhens" %% "fs2-utils" % V.fs2Utils,
       "de.lolhens" %% "http4s-brotli" % V.http4sBrotli,
-      "de.lolhens" %% "http4s-proxy" % V.http4sProxy,
+      "de.lhns" %% "http4s-proxy" % V.http4sProxy,
       "de.lhns" %% "http4s-spa" % V.http4sSpa,
       "org.bidib.com.github.markusbernhardt" % "proxy-vole" % V.proxyVole,
       "org.http4s" %% "http4s-ember-server" % V.http4s,
