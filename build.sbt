@@ -13,7 +13,7 @@ val V = new {
   val http4sBrotli = "0.5.0"
   val http4sDom = "0.2.6"
   val http4sJdkHttpClient = "0.7.0"
-  val http4sProxy = "0.4.0"
+  val http4sProxy = "0.4.1"
   val http4sSpa = "0.6.2"
   val logbackClassic = "1.4.5"
   val proxyVole = "1.0.18"
@@ -106,7 +106,7 @@ lazy val server = project
       "ch.qos.logback" % "logback-classic" % V.logbackClassic,
       "de.lolhens" %% "fs2-utils" % V.fs2Utils,
       "de.lolhens" %% "http4s-brotli" % V.http4sBrotli,
-      "de.lolhens" %% "http4s-proxy" % V.http4sProxy,
+      "de.lhns" %% "http4s-proxy" % V.http4sProxy,
       "de.lhns" %% "http4s-spa" % V.http4sSpa,
       "org.bidib.com.github.markusbernhardt" % "proxy-vole" % V.proxyVole,
       "org.http4s" %% "http4s-ember-server" % V.http4s,
