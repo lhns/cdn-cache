@@ -20,7 +20,7 @@ val V = new {
   val remoteIo = "0.0.1"
   val scalajsDom = "2.6.0"
   val scalajsReact = "2.1.1"
-  val scodecBits = "1.1.37"
+  val scodecBits = "1.1.38"
 }
 
 lazy val commonSettings: Seq[Setting[_]] = Seq(
