@@ -9,18 +9,18 @@ val V = new {
   val catsEffectUtils = "0.3.0"
   val circe = "0.14.5"
   val fs2Utils = "0.4.0"
-  val http4s = "0.23.22"
+  val http4s = "0.23.23"
   val http4sBrotli = "0.5.0"
   val http4sDom = "0.2.7"
   val http4sJdkHttpClient = "0.7.0"
   val http4sProxy = "0.4.1"
   val http4sSpa = "0.6.2"
   val logbackClassic = "1.4.7"
-  val proxyVole = "1.1.0"
+  val proxyVole = "1.1.2"
   val remoteIo = "0.0.1"
   val scalajsDom = "2.6.0"
   val scalajsReact = "2.1.1"
-  val scodecBits = "1.1.37"
+  val scodecBits = "1.1.38"
 }
 
 lazy val commonSettings: Seq[Setting[_]] = Seq(
